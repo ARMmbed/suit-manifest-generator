@@ -28,7 +28,8 @@ indoc = {
         'storageId' : 'foo',
         'uris' : [
             {'uri':'http://foo.com', 'rank':1}
-        ]
+        ],
+        'digestAlgorithm' : 'SHA-256'
     }
 }
 
@@ -57,6 +58,13 @@ PayloadFormatTypes = {
     'binary' : 1,
     'hex' : 2
 }
+
+PayloadDigestAlgorithmTypes = {
+    'SHA-256' : 1,
+    'SHA-384' : 2,
+    'SHA-512' : 3,
+}
+
 
 def getManifestVersion(doc) :
     return doc.get('manifestFormatVersion', LatestManifestVersion)
@@ -116,13 +124,13 @@ def getPayloadFormat(payloadInfo):
     formatParams = None
     if isinstance(payloadInfo_format, str):
         if not payloadInfo_format in PayloadFormatTypes:
-            raise ValueError('%r is not a recognized payload format')
+            raise ValueError('%r is not a recognized payload format'%payloadInfo_format)
         formatType = PayloadFormatTypes[payloadInfo_format]
     elif isinstance(payloadInfo_format, dict):
         if not 'type' in payloadInfo_format:
             raise ValueError('If payload format is a map, type is required.')
         if not payloadInfo_format['type'] in PayloadFormatTypes:
-            raise ValueError('%r is not a recognized payload format')
+            raise ValueError('%r is not a recognized payload format'%payloadInfo_format['type'])
         formatType = PayloadFormatTypes[payloadInfo_format['type']]
         formatParams = payloadInfo_format.get('params', None)
     else:
@@ -154,6 +162,33 @@ def getPayloadURIs(payloadInfo):
             raise ValueError('URI entries in the payloadInfo uris field must be maps')
         uris.append([str(uri['uri']),int(uri['rank'])])
     return uris
+def getPayloadDigestAlgorithm(payloadInfo):
+    if not 'digestAlgorithm' in payloadInfo:
+        return None
+    payloadInfo_dgstAlg = payloadInfo['digestAlgorithm']
+    dgstType = None
+    dgstParams = None
+    if isinstance(payloadInfo_dgstAlg, str):
+        if not payloadInfo_dgstAlg in PayloadDigestAlgorithmTypes:
+            raise ValueError('%r is not a recognized digest algorithm'% payloadInfo_dgstAlg)
+        dgstType = PayloadDigestAlgorithmTypes[payloadInfo_dgstAlg]
+    elif isinstance(payloadInfo_dgstAlg, dict):
+        if not 'type' in payloadInfo_dgstAlg:
+            raise ValueError('If payload digest algorithm is a map, type is required.')
+        if not payloadInfo_dgstAlg['type'] in PayloadDigestAlgorithmTypes:
+            raise ValueError('%r is not a recognized digest algorithm'% payloadInfo_dgstAlg)
+        dgstType = PayloadDigestAlgorithmTypes[payloadInfo_dgstAlg['type']]
+        dgstParams = payloadInfo_dgstAlg.get('params', None)
+    else:
+        raise ValueError('digestAlgorithm must be either a map or a string.')
+
+    digestAlgorithm = [
+        dgstType
+    ]
+    if dgstParams:
+        digestAlgorithm.append(cbor.dumps(dgstParams))
+    return digestAlgorithm
+
 
 def getPayloadInfo(doc):
     if not 'payloadInfo' in doc:
@@ -167,7 +202,9 @@ def getPayloadInfo(doc):
         # Get the storage identifier
         getPayloadStorageId(docPayloadInfo),
         # Get the URIs
-        getPayloadURIs(docPayloadInfo)
+        getPayloadURIs(docPayloadInfo),
+        # Get the digestAlgorithm
+        getPayloadDigestAlgorithm(docPayloadInfo)
     ]
     return payloadInfo
     #     digestAlgorithm = [
@@ -197,7 +234,7 @@ print (m)
 cborstr = cbor.dumps(m)
 print(binascii.b2a_hex(cborstr))
 pod = cbor.loads(cborstr)
-
+print (pod)
 # Handle JSON's painful binary parsing...
 pod[2] = binascii.b2a_base64(pod[2]).strip()
 
