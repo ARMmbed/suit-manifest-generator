@@ -29,7 +29,10 @@ indoc = {
         'uris' : [
             {'uri':'http://foo.com', 'rank':1}
         ],
-        'digestAlgorithm' : 'SHA-256'
+        'digestAlgorithm' : 'SHA-256',
+        'digests' : {
+            'raw' : bytes('1234')
+        }
     }
 }
 
@@ -65,6 +68,12 @@ PayloadDigestAlgorithmTypes = {
     'SHA-512' : 3,
 }
 
+PayloadDigestTypes = {
+    'raw' : 1,
+    'installed' : 2,
+    'ciphertext' : 3,
+    'pre-image' : 4
+}
 
 def getManifestVersion(doc) :
     return doc.get('manifestFormatVersion', LatestManifestVersion)
@@ -96,7 +105,7 @@ def getConditions(doc):
         if not k in ConditionTypes:
             raise ValueError('Unrecognized condition type: %r'% k)
         # TODO: Condition validation
-        conditions.append([ConditionTypes[k], cbor.dumps(v)])
+        conditions.append([ConditionTypes[k], bytes(v)])
     return conditions
 
 def getDirectives(doc):
@@ -107,7 +116,7 @@ def getDirectives(doc):
         if not k in DirectiveTypes:
             raise ValueError('Unrecognized directive type: %r' % k)
         # TODO: Directive Validation
-        directives.append([DirectiveTypes[k], cbor.dumps(v)])
+        directives.append([DirectiveTypes[k], bytes(v)])
     return directives
 
 def getAliases(doc):
@@ -140,7 +149,7 @@ def getPayloadFormat(payloadInfo):
         formatType
     ]
     if formatParams:
-        payloadFormat.append(cbor.dumps(formatParams))
+        payloadFormat.append(bytes(formatParams))
     return payloadFormat
 def getPayloadSize(payloadInfo):
     if not 'size' in payloadInfo:
@@ -186,9 +195,23 @@ def getPayloadDigestAlgorithm(payloadInfo):
         dgstType
     ]
     if dgstParams:
-        digestAlgorithm.append(cbor.dumps(dgstParams))
+        digestAlgorithm.append(bytes(dgstParams))
     return digestAlgorithm
 
+def getPayloadDigests(payloadInfo):
+    # TODO: digests may only be NULL if payload is not NULL.
+    if not payloadInfo.get('digests', None) and not payloadInfo.get('payload', None):
+        raise ValueError('digests MUST be present in payloadInfo if payload is omitted.')
+    if not payloadInfo.get('digests', None):
+        return None
+
+    digests = []
+    for k,v in payloadInfo['digests'].items():
+        if not k in PayloadDigestTypes:
+            raise ValueError('Unrecognized payload digest type: %r' % k)
+        # TODO: Directive Validation
+        digests.append([PayloadDigestTypes[k], bytes(v)])
+    return digests
 
 def getPayloadInfo(doc):
     if not 'payloadInfo' in doc:
@@ -204,14 +227,12 @@ def getPayloadInfo(doc):
         # Get the URIs
         getPayloadURIs(docPayloadInfo),
         # Get the digestAlgorithm
-        getPayloadDigestAlgorithm(docPayloadInfo)
+        getPayloadDigestAlgorithm(docPayloadInfo),
+        # Get a list of digests
+        getPayloadDigests(docPayloadInfo),
+
     ]
     return payloadInfo
-    #     digestAlgorithm = [
-    #         type : int,
-    #         ? parameters: bstr
-    #     ] / nil,
-    #     digests = {* int => bstr} / nil,
     #     payload = COSE_Encrypt / bstr / nil
     # ]
 print (indoc)
