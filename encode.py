@@ -4,6 +4,7 @@ import time
 import binascii
 import json
 import uuid
+from builtins import bytes
 
 armUUID = uuid.uuid5(uuid.NAMESPACE_DNS, 'arm.com')
 armSuitDeviceUUID = uuid.uuid5(armUUID, 'suit')
@@ -18,8 +19,17 @@ indoc = {
     'conditions' : {
         'vendorId' : armUUID.bytes,
         'classId' : armSuitDeviceUUID.bytes
+    },
+    'payloadInfo' : {
+        'format' : {
+            'type' : 'binary'
+        },
+        'size' : 16,
+        'storageId' : 'foo',
+        'uris' : [
+            {'uri':'http://foo.com', 'rank':1}
+        ]
     }
-
 }
 
 LatestManifestVersion = 2
@@ -41,6 +51,11 @@ ConditionTypes = {
 DirectiveTypes = {
     'applyImmediately' : 1,
     'applyAfter' : 2
+}
+
+PayloadFormatTypes = {
+    'binary' : 1,
+    'hex' : 2
 }
 
 def getManifestVersion(doc) :
@@ -93,9 +108,75 @@ def getDependencies(doc):
     pass
 def getExtensions(doc):
     pass
-def getPayloadInfo(doc):
-    pass
+def getPayloadFormat(payloadInfo):
+    if not 'format' in payloadInfo:
+        raise ValueError('format is a required element of payloadInfo')
+    payloadInfo_format = payloadInfo['format']
+    formatType = None
+    formatParams = None
+    if isinstance(payloadInfo_format, str):
+        if not payloadInfo_format in PayloadFormatTypes:
+            raise ValueError('%r is not a recognized payload format')
+        formatType = PayloadFormatTypes[payloadInfo_format]
+    elif isinstance(payloadInfo_format, dict):
+        if not 'type' in payloadInfo_format:
+            raise ValueError('If payload format is a map, type is required.')
+        if not payloadInfo_format['type'] in PayloadFormatTypes:
+            raise ValueError('%r is not a recognized payload format')
+        formatType = PayloadFormatTypes[payloadInfo_format['type']]
+        formatParams = payloadInfo_format.get('params', None)
+    else:
+        raise ValueError('No payload format found in payloadInfo')
 
+    payloadFormat = [
+        formatType
+    ]
+    if formatParams:
+        payloadFormat.append(cbor.dumps(formatParams))
+    return payloadFormat
+def getPayloadSize(payloadInfo):
+    if not 'size' in payloadInfo:
+        raise ValueError('size is required in payloadInfo')
+    return int(payloadInfo['size'])
+def getPayloadStorageId(payloadInfo):
+    if not 'storageId' in payloadInfo:
+        raise ValueError('storageId is required in payloadInfo')
+    return bytes(payloadInfo['storageId'])
+def getPayloadURIs(payloadInfo):
+    if not 'uris' in payloadInfo:
+        return None
+    docUris = payloadInfo['uris']
+    if len(docUris) == 0:
+        return None
+    uris = []
+    for uri in docUris:
+        if not isinstance(uri,dict):
+            raise ValueError('URI entries in the payloadInfo uris field must be maps')
+        uris.append([str(uri['uri']),int(uri['rank'])])
+    return uris
+
+def getPayloadInfo(doc):
+    if not 'payloadInfo' in doc:
+        return None
+    docPayloadInfo = doc['payloadInfo']
+    payloadInfo = [
+        # Get the payload format
+        getPayloadFormat(docPayloadInfo),
+        # Get the payload size
+        getPayloadSize(docPayloadInfo),
+        # Get the storage identifier
+        getPayloadStorageId(docPayloadInfo),
+        # Get the URIs
+        getPayloadURIs(docPayloadInfo)
+    ]
+    return payloadInfo
+    #     digestAlgorithm = [
+    #         type : int,
+    #         ? parameters: bstr
+    #     ] / nil,
+    #     digests = {* int => bstr} / nil,
+    #     payload = COSE_Encrypt / bstr / nil
+    # ]
 print (indoc)
 m = [
     getManifestVersion(indoc),
