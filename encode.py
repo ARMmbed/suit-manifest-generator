@@ -37,6 +37,7 @@ indoc = {
 }
 
 LatestManifestVersion = 2
+COSE_Encrypt_Tag = 96
 
 TextFields = {
     'manifestDescription' : 1,
@@ -213,6 +214,18 @@ def getPayloadDigests(payloadInfo):
         digests.append([PayloadDigestTypes[k], bytes(v)])
     return digests
 
+def getPayloadData(payloadInfo):
+    if not 'payload' in payloadInfo:
+        return None
+    try:
+        cb = cbor.loads(payloadInfo['payload'])
+        if isinstance(cb, cbor.cbor.Tag) and cb.tag == COSE_Encrypt_Tag:
+            return cb
+    except:
+        pass
+
+    return bytes(payloadInfo['payload'])
+
 def getPayloadInfo(doc):
     if not 'payloadInfo' in doc:
         return None
@@ -230,7 +243,8 @@ def getPayloadInfo(doc):
         getPayloadDigestAlgorithm(docPayloadInfo),
         # Get a list of digests
         getPayloadDigests(docPayloadInfo),
-
+        # Get the payload
+        getPayloadData(docPayloadInfo)
     ]
     return payloadInfo
     #     payload = COSE_Encrypt / bstr / nil
