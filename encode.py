@@ -17,6 +17,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ----------------------------------------------------------------------------
+"""
+This is a demo script that is intended to act as a reference for SUIT manifest
+encoding.
+
+NOTE: It is expected that C and C++ parser implementations will be written
+against this script, so it does not adhere to PEP8 in order to maintain
+similarity between the naming in this script and that of C/C++ implementations.
+"""
 import cbor
 import os
 import time
@@ -24,7 +32,6 @@ import binascii
 import json
 import uuid
 import sys
-from builtins import bytes
 
 # armUUID = uuid.uuid5(uuid.NAMESPACE_DNS, 'arm.com')
 # print(armUUID)
@@ -110,11 +117,11 @@ def getTextObj(doc):
     if not 'text' in doc:
         return None
     fields = {}
-    for k,v in doc['text'].items():
+    for k, v in doc['text'].items():
         if not k in TextFields:
-            raise ValueError('%r is not a valid text field', k)
+            raise KeyError('%r is not a valid text field' % k)
         if TextFields[k] in fields:
-            raise ValueError('%r must be unique in text fields', k)
+            raise KeyError('%r must be unique in text fields' % k)
         # Text fields are intentionally freeform. No validation needed.
         fields[TextFields[k]] = str(v)
     return fields
@@ -131,7 +138,7 @@ def getConditions(doc):
     conditions = []
     for k,v in doc['conditions'].items():
         if not k in ConditionTypes:
-            raise ValueError('Unrecognized condition type: %r'% k)
+            raise KeyError('Unrecognized condition type: %r' % k)
         # TODO: Condition validation
         conditions.append([ConditionTypes[k], guessBinFormat(v)])
     return conditions
@@ -142,36 +149,39 @@ def getDirectives(doc):
     directives = []
     for k,v in doc['directives'].items():
         if not k in DirectiveTypes:
-            raise ValueError('Unrecognized directive type: %r' % k)
+            raise KeyError('Unrecognized directive type: %r' % k)
         # TODO: Directive Validation
         directives.append([DirectiveTypes[k], guessBinFormat(v)])
     return directives
 
 def getAliases(doc):
     pass
+
 def getDependencies(doc):
     pass
+
 def getExtensions(doc):
     pass
+
 def getPayloadFormat(payloadInfo):
     if not 'format' in payloadInfo:
-        raise ValueError('format is a required element of payloadInfo')
+        raise KeyError('format is a required element of payloadInfo')
     payloadInfo_format = payloadInfo['format']
     formatType = None
     formatParams = None
     if isinstance(payloadInfo_format, str):
         if not payloadInfo_format in PayloadFormatTypes:
-            raise ValueError('%r is not a recognized payload format'%payloadInfo_format)
+            raise KeyError('%r is not a recognized payload format'%payloadInfo_format)
         formatType = PayloadFormatTypes[payloadInfo_format]
     elif isinstance(payloadInfo_format, dict):
         if not 'type' in payloadInfo_format:
-            raise ValueError('If payload format is a map, type is required.')
+            raise KeyError('If payload format is a map, type is required.')
         if not payloadInfo_format['type'] in PayloadFormatTypes:
-            raise ValueError('%r is not a recognized payload format'%payloadInfo_format['type'])
+            raise KeyError('%r is not a recognized payload format'%payloadInfo_format['type'])
         formatType = PayloadFormatTypes[payloadInfo_format['type']]
         formatParams = payloadInfo_format.get('params', None)
     else:
-        raise ValueError('No payload format found in payloadInfo')
+        raise KeyError('No payload format found in payloadInfo')
 
     payloadFormat = [
         formatType
@@ -180,13 +190,15 @@ def getPayloadFormat(payloadInfo):
         payloadFormat.append(guessBinFormat(formatParams))
     return payloadFormat
 def getPayloadSize(payloadInfo):
-    if not 'size' in payloadInfo:
-        raise ValueError('size is required in payloadInfo')
+    if 'size' not in payloadInfo:
+        raise KeyError('size is required in payloadInfo')
     return int(payloadInfo['size'])
+
 def getPayloadStorageId(payloadInfo):
     if not 'storageId' in payloadInfo:
-        raise ValueError('storageId is required in payloadInfo')
+        raise KeyError('storageId is required in payloadInfo')
     return guessBinFormat(payloadInfo['storageId'])
+
 def getPayloadURIs(payloadInfo):
     if not 'uris' in payloadInfo:
         return None
@@ -196,9 +208,10 @@ def getPayloadURIs(payloadInfo):
     uris = []
     for uri in docUris:
         if not isinstance(uri,dict):
-            raise ValueError('URI entries in the payloadInfo uris field must be maps')
+            raise KeyError('URI entries in the payloadInfo uris field must be maps')
         uris.append([str(uri['uri']),int(uri['rank'])])
     return uris
+
 def getPayloadDigestAlgorithm(payloadInfo):
     if not 'digestAlgorithm' in payloadInfo:
         return None
@@ -207,17 +220,17 @@ def getPayloadDigestAlgorithm(payloadInfo):
     dgstParams = None
     if isinstance(payloadInfo_dgstAlg, str):
         if not payloadInfo_dgstAlg in PayloadDigestAlgorithmTypes:
-            raise ValueError('%r is not a recognized digest algorithm'% payloadInfo_dgstAlg)
+            raise KeyError('%r is not a recognized digest algorithm'% payloadInfo_dgstAlg)
         dgstType = PayloadDigestAlgorithmTypes[payloadInfo_dgstAlg]
     elif isinstance(payloadInfo_dgstAlg, dict):
         if not 'type' in payloadInfo_dgstAlg:
-            raise ValueError('If payload digest algorithm is a map, type is required.')
+            raise KeyError('If payload digest algorithm is a map, type is required.')
         if not payloadInfo_dgstAlg['type'] in PayloadDigestAlgorithmTypes:
-            raise ValueError('%r is not a recognized digest algorithm'% payloadInfo_dgstAlg)
+            raise KeyError('%r is not a recognized digest algorithm'% payloadInfo_dgstAlg)
         dgstType = PayloadDigestAlgorithmTypes[payloadInfo_dgstAlg['type']]
         dgstParams = payloadInfo_dgstAlg.get('params', None)
     else:
-        raise ValueError('digestAlgorithm must be either a map or a string.')
+        raise KeyError('digestAlgorithm must be either a map or a string.')
 
     digestAlgorithm = [
         dgstType
@@ -229,16 +242,16 @@ def getPayloadDigestAlgorithm(payloadInfo):
 def getPayloadDigests(payloadInfo):
     # TODO: digests may only be NULL if payload is not NULL.
     if not payloadInfo.get('digests', None) and not payloadInfo.get('payload', None):
-        raise ValueError('digests MUST be present in payloadInfo if payload is omitted.')
+        raise KeyError('digests MUST be present in payloadInfo if payload is omitted.')
     if not payloadInfo.get('digests', None):
         return None
 
-    digests = []
+    digests = {}
     for k,v in payloadInfo['digests'].items():
         if not k in PayloadDigestTypes:
-            raise ValueError('Unrecognized payload digest type: %r' % k)
+            raise KeyError('Unrecognized payload digest type: %r' % k)
         # TODO: Digest Parameter Validation
-        digests.append([PayloadDigestTypes[k], guessBinFormat(v)])
+        digests[PayloadDigestTypes[k]] = guessBinFormat(v)
     return digests
 
 def getPayloadData(payloadInfo):
@@ -292,14 +305,7 @@ payloadInfo = getPayloadInfo(indoc)
 if payloadInfo:
     m.append(payloadInfo)
 
-# print (m)
 cborstr = cbor.dumps(m)
-# print(binascii.b2a_hex(cborstr))
+
 with open(sys.argv[2], 'wb') as fd:
     fd.write(cborstr)
-# pod = cbor.loads(cborstr)
-# print (pod)
-# Handle JSON's painful binary parsing...
-# pod[2] = binascii.b2a_base64(pod[2]).strip()
-
-# print(json.dumps(pod, indent=4))
