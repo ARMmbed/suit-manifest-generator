@@ -4,37 +4,45 @@ import time
 import binascii
 import json
 import uuid
+import sys
 from builtins import bytes
 
-armUUID = uuid.uuid5(uuid.NAMESPACE_DNS, 'arm.com')
-armSuitDeviceUUID = uuid.uuid5(armUUID, 'suit')
+# armUUID = uuid.uuid5(uuid.NAMESPACE_DNS, 'arm.com')
+# print(armUUID)
+# armSuitDeviceUUID = uuid.uuid5(armUUID, 'suit')
+# print(armSuitDeviceUUID)
+jsonDoc = None
+with open(sys.argv[1]) as fd:
+    jsonDoc = json.load(fd)
 
-indoc = {
-    'text' : {
-        'manifestDescription' : 'This is a test',
-        'payloadDescription' : 'A test payload',
-        'vendor' : 'A sample vendor',
-        'model' : 'An experimental model'
-    },
-    'conditions' : {
-        'vendorId' : armUUID.bytes,
-        'classId' : armSuitDeviceUUID.bytes
-    },
-    'payloadInfo' : {
-        'format' : {
-            'type' : 'binary'
-        },
-        'size' : 16,
-        'storageId' : 'foo',
-        'uris' : [
-            {'uri':'http://foo.com', 'rank':1}
-        ],
-        'digestAlgorithm' : 'SHA-256',
-        'digests' : {
-            'raw' : bytes('1234')
-        }
-    }
-}
+def guessBinFormat(s):
+    if isinstance(s,bytes):
+        return s
+    binval = None
+    try:
+        binval = binascii.a2b_hex(s)
+    except:
+        try:
+            binval = binascii.a2b_base64(s)
+        except:
+            binval = s.encode('utf-8')
+    return binval
+
+# Convert/validate the binary elements that were loaded from JSON
+if 'conditions' in jsonDoc:
+    conditions = jsonDoc['conditions']
+    if 'vendorId' in conditions:
+        conditions['vendorId'] = uuid.UUID(conditions['vendorId']).bytes
+    if 'classId' in conditions:
+        conditions['classId'] = uuid.UUID(conditions['classId']).bytes
+
+if 'payloadInfo' in jsonDoc:
+    if 'digests' in jsonDoc['payloadInfo']:
+        for k,v in jsonDoc['payloadInfo']['digests'].items():
+            # Try to guess the encoding
+            jsonDoc['payloadInfo']['digests'][k] = guessBinFormat(v)
+
+indoc = jsonDoc
 
 LatestManifestVersion = 2
 COSE_Encrypt_Tag = 96
@@ -93,7 +101,7 @@ def getTextObj(doc):
     return fields
 
 def getNonce(doc):
-    return doc.get('nonce', os.urandom(16))
+    return guessBinFormat(doc.get('nonce', os.urandom(16)))
 
 def getTimestamp(doc):
     return doc.get('timestamp', int(time.time()))
@@ -106,7 +114,7 @@ def getConditions(doc):
         if not k in ConditionTypes:
             raise ValueError('Unrecognized condition type: %r'% k)
         # TODO: Condition validation
-        conditions.append([ConditionTypes[k], bytes(v)])
+        conditions.append([ConditionTypes[k], guessBinFormat(v)])
     return conditions
 
 def getDirectives(doc):
@@ -117,7 +125,7 @@ def getDirectives(doc):
         if not k in DirectiveTypes:
             raise ValueError('Unrecognized directive type: %r' % k)
         # TODO: Directive Validation
-        directives.append([DirectiveTypes[k], bytes(v)])
+        directives.append([DirectiveTypes[k], guessBinFormat(v)])
     return directives
 
 def getAliases(doc):
@@ -150,7 +158,7 @@ def getPayloadFormat(payloadInfo):
         formatType
     ]
     if formatParams:
-        payloadFormat.append(bytes(formatParams))
+        payloadFormat.append(guessBinFormat(formatParams))
     return payloadFormat
 def getPayloadSize(payloadInfo):
     if not 'size' in payloadInfo:
@@ -159,7 +167,7 @@ def getPayloadSize(payloadInfo):
 def getPayloadStorageId(payloadInfo):
     if not 'storageId' in payloadInfo:
         raise ValueError('storageId is required in payloadInfo')
-    return bytes(payloadInfo['storageId'])
+    return guessBinFormat(payloadInfo['storageId'])
 def getPayloadURIs(payloadInfo):
     if not 'uris' in payloadInfo:
         return None
@@ -196,7 +204,7 @@ def getPayloadDigestAlgorithm(payloadInfo):
         dgstType
     ]
     if dgstParams:
-        digestAlgorithm.append(bytes(dgstParams))
+        digestAlgorithm.append(guessBinFormat(dgstParams))
     return digestAlgorithm
 
 def getPayloadDigests(payloadInfo):
@@ -210,8 +218,8 @@ def getPayloadDigests(payloadInfo):
     for k,v in payloadInfo['digests'].items():
         if not k in PayloadDigestTypes:
             raise ValueError('Unrecognized payload digest type: %r' % k)
-        # TODO: Directive Validation
-        digests.append([PayloadDigestTypes[k], bytes(v)])
+        # TODO: Digest Parameter Validation
+        digests.append([PayloadDigestTypes[k], guessBinFormat(v)])
     return digests
 
 def getPayloadData(payloadInfo):
@@ -224,7 +232,7 @@ def getPayloadData(payloadInfo):
     except:
         pass
 
-    return bytes(payloadInfo['payload'])
+    return guessBinFormat(payloadInfo['payload'])
 
 def getPayloadInfo(doc):
     if not 'payloadInfo' in doc:
@@ -249,7 +257,7 @@ def getPayloadInfo(doc):
     return payloadInfo
     #     payload = COSE_Encrypt / bstr / nil
     # ]
-print (indoc)
+# print (indoc)
 m = [
     getManifestVersion(indoc),
     getTextObj(indoc),
@@ -265,12 +273,14 @@ payloadInfo = getPayloadInfo(indoc)
 if payloadInfo:
     m.append(payloadInfo)
 
-print (m)
+# print (m)
 cborstr = cbor.dumps(m)
-print(binascii.b2a_hex(cborstr))
-pod = cbor.loads(cborstr)
-print (pod)
+# print(binascii.b2a_hex(cborstr))
+with open(sys.argv[2], 'wb') as fd:
+    fd.write(cborstr)
+# pod = cbor.loads(cborstr)
+# print (pod)
 # Handle JSON's painful binary parsing...
-pod[2] = binascii.b2a_base64(pod[2]).strip()
+# pod[2] = binascii.b2a_base64(pod[2]).strip()
 
 # print(json.dumps(pod, indent=4))
