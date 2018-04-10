@@ -27,6 +27,8 @@ similarity between the naming in this script and that of C/C++ implementations.
 """
 import cbor
 import sys
+import ed25519
+import eddsa
 
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes
@@ -41,14 +43,26 @@ from cryptography.hazmat.primitives import serialization
 COSE_Sign_Tag = 98
 APPLICATION_OCTET_STREAM_ID = 42
 ES256 = -7
+EDDSA = -8
 
 private_key = None
+algo = ES256
 with open(sys.argv[1], 'rb') as fd:
-    private_key = serialization.load_pem_private_key(fd.read(), password=None, backend=default_backend())
+    priv_key_bytes = fd.read()
+    try:
+        private_key = serialization.load_pem_private_key(priv_key_bytes, password=None, backend=default_backend())
+    except ValueError:
+        algo = EDDSA
+        private_key = ed25519.SigningKey(eddsa.parse_privkey(priv_key_bytes))
+
 
 public_key = None
 with open(sys.argv[2], 'rb') as fd:
-    public_key = serialization.load_pem_public_key(fd.read(), backend=default_backend())
+    pub_key_bytes = fd.read()
+    try:
+        public_key = serialization.load_pem_public_key(pub_key_bytes, backend=default_backend())
+    except ValueError:
+        public_key = ed25519.VerifyingKey(eddsa.parse_pubkey(pub_key_bytes))
 
 # Read the input file
 doc = None
@@ -81,15 +95,20 @@ if not isCOSE_Sign_Tagged:
         payload,
         signatures
     ]
+
+if algo == EDDSA:
+    public_bytes = public_key.to_bytes()
+else:
+    public_bytes = public_key.public_bytes(serialization.Encoding.DER,
+                        serialization.PublicFormat.SubjectPublicKeyInfo)
+
 # NOTE: Using RFC7093, Method 4
 digest = hashes.Hash(hashes.SHA256(), backend=default_backend())
-digest.update(
-    public_key.public_bytes(serialization.Encoding.DER,
-                            serialization.PublicFormat.SubjectPublicKeyInfo))
+digest.update(public_bytes)
 kid = digest.finalize()
 # Sign the payload
 protected = cbor.dumps({
-    1: ES256, # alg
+    1: algo, # alg
     4: kid #kid
 })
 
@@ -105,10 +124,14 @@ Sig_structure = [
 
 sig_str = cbor.dumps(Sig_structure)
 
-signature = private_key.sign(
-    sig_str,
-    ec.ECDSA(hashes.SHA256())
-)
+if algo == EDDSA:
+    signature = private_key.sign(sig_str)
+else:
+    signature = private_key.sign(
+        sig_str,
+        ec.ECDSA(hashes.SHA256())
+    )
+
 
 COSE_Signature = [
     protected,
