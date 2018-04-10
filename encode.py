@@ -209,7 +209,7 @@ def getPayloadURIs(payloadInfo):
     for uri in docUris:
         if not isinstance(uri,dict):
             raise KeyError('URI entries in the payloadInfo uris field must be maps')
-        uris.append([str(uri['uri']),int(uri['rank'])])
+        uris.append([int(uri['rank']),str(uri['uri'])])
     return uris
 
 def getPayloadDigestAlgorithm(payloadInfo):
