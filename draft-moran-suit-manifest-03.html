@@ -1,0 +1,1468 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" 
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head profile="http://www.w3.org/2006/03/hcard http://dublincore.org/documents/2008/08/04/dc-html/">
+  <meta http-equiv="Content-Type" content="text/html; charset=us-ascii" />
+
+  <title>SUIT CBOR manifest serialisation format</title>
+
+  <style type="text/css" title="Xml2Rfc (sans serif)">
+  /*<![CDATA[*/
+	  a {
+	  text-decoration: none;
+	  }
+      /* info code from SantaKlauss at http://www.madaboutstyle.com/tooltip2.html */
+      a.info {
+          /* This is the key. */
+          position: relative;
+          z-index: 24;
+          text-decoration: none;
+      }
+      a.info:hover {
+          z-index: 25;
+          color: #FFF; background-color: #900;
+      }
+      a.info span { display: none; }
+      a.info:hover span.info {
+          /* The span will display just on :hover state. */
+          display: block;
+          position: absolute;
+          font-size: smaller;
+          top: 2em; left: -5em; width: 15em;
+          padding: 2px; border: 1px solid #333;
+          color: #900; background-color: #EEE;
+          text-align: left;
+      }
+	  a.smpl {
+	  color: black;
+	  }
+	  a:hover {
+	  text-decoration: underline;
+	  }
+	  a:active {
+	  text-decoration: underline;
+	  }
+	  address {
+	  margin-top: 1em;
+	  margin-left: 2em;
+	  font-style: normal;
+	  }
+	  body {
+	  color: black;
+	  font-family: verdana, helvetica, arial, sans-serif;
+	  font-size: 10pt;
+	  max-width: 55em;
+	  
+	  }
+	  cite {
+	  font-style: normal;
+	  }
+	  dd {
+	  margin-right: 2em;
+	  }
+	  dl {
+	  margin-left: 2em;
+	  }
+	
+	  ul.empty {
+	  list-style-type: none;
+	  }
+	  ul.empty li {
+	  margin-top: .5em;
+	  }
+	  dl p {
+	  margin-left: 0em;
+	  }
+	  dt {
+	  margin-top: .5em;
+	  }
+	  h1 {
+	  font-size: 14pt;
+	  line-height: 21pt;
+	  page-break-after: avoid;
+	  }
+	  h1.np {
+	  page-break-before: always;
+	  }
+	  h1 a {
+	  color: #333333;
+	  }
+	  h2 {
+	  font-size: 12pt;
+	  line-height: 15pt;
+	  page-break-after: avoid;
+	  }
+	  h3, h4, h5, h6 {
+	  font-size: 10pt;
+	  page-break-after: avoid;
+	  }
+	  h2 a, h3 a, h4 a, h5 a, h6 a {
+	  color: black;
+	  }
+	  img {
+	  margin-left: 3em;
+	  }
+	  li {
+	  margin-left: 2em;
+	  margin-right: 2em;
+	  }
+	  ol {
+	  margin-left: 2em;
+	  margin-right: 2em;
+	  }
+	  ol p {
+	  margin-left: 0em;
+	  }
+	  p {
+	  margin-left: 2em;
+	  margin-right: 2em;
+	  }
+	  pre {
+	  margin-left: 3em;
+	  background-color: lightyellow;
+	  padding: .25em;
+	  }
+	  pre.text2 {
+	  border-style: dotted;
+	  border-width: 1px;
+	  background-color: #f0f0f0;
+	  width: 69em;
+	  }
+	  pre.inline {
+	  background-color: white;
+	  padding: 0em;
+	  }
+	  pre.text {
+	  border-style: dotted;
+	  border-width: 1px;
+	  background-color: #f8f8f8;
+	  width: 69em;
+	  }
+	  pre.drawing {
+	  border-style: solid;
+	  border-width: 1px;
+	  background-color: #f8f8f8;
+	  padding: 2em;
+	  }
+	  table {
+	  margin-left: 2em;
+	  }
+	  table.tt {
+	  vertical-align: top;
+	  }
+	  table.full {
+	  border-style: outset;
+	  border-width: 1px;
+	  }
+	  table.headers {
+	  border-style: outset;
+	  border-width: 1px;
+	  }
+	  table.tt td {
+	  vertical-align: top;
+	  }
+	  table.full td {
+	  border-style: inset;
+	  border-width: 1px;
+	  }
+	  table.tt th {
+	  vertical-align: top;
+	  }
+	  table.full th {
+	  border-style: inset;
+	  border-width: 1px;
+	  }
+	  table.headers th {
+	  border-style: none none inset none;
+	  border-width: 1px;
+	  }
+	  table.left {
+	  margin-right: auto;
+	  }
+	  table.right {
+	  margin-left: auto;
+	  }
+	  table.center {
+	  margin-left: auto;
+	  margin-right: auto;
+	  }
+	  caption {
+	  caption-side: bottom;
+	  font-weight: bold;
+	  font-size: 9pt;
+	  margin-top: .5em;
+	  }
+	
+	  table.header {
+	  border-spacing: 1px;
+	  width: 95%;
+	  font-size: 10pt;
+	  color: white;
+	  }
+	  td.top {
+	  vertical-align: top;
+	  }
+	  td.topnowrap {
+	  vertical-align: top;
+	  white-space: nowrap; 
+	  }
+	  table.header td {
+	  background-color: gray;
+	  width: 50%;
+	  }
+	  table.header a {
+	  color: white;
+	  }
+	  td.reference {
+	  vertical-align: top;
+	  white-space: nowrap;
+	  padding-right: 1em;
+	  }
+	  thead {
+	  display:table-header-group;
+	  }
+	  ul.toc, ul.toc ul {
+	  list-style: none;
+	  margin-left: 1.5em;
+	  margin-right: 0em;
+	  padding-left: 0em;
+	  }
+	  ul.toc li {
+	  line-height: 150%;
+	  font-weight: bold;
+	  font-size: 10pt;
+	  margin-left: 0em;
+	  margin-right: 0em;
+	  }
+	  ul.toc li li {
+	  line-height: normal;
+	  font-weight: normal;
+	  font-size: 9pt;
+	  margin-left: 0em;
+	  margin-right: 0em;
+	  }
+	  li.excluded {
+	  font-size: 0pt;
+	  }
+	  ul p {
+	  margin-left: 0em;
+	  }
+	
+	  .comment {
+	  background-color: yellow;
+	  }
+	  .center {
+	  text-align: center;
+	  }
+	  .error {
+	  color: red;
+	  font-style: italic;
+	  font-weight: bold;
+	  }
+	  .figure {
+	  font-weight: bold;
+	  text-align: center;
+	  font-size: 9pt;
+	  }
+	  .filename {
+	  color: #333333;
+	  font-weight: bold;
+	  font-size: 12pt;
+	  line-height: 21pt;
+	  text-align: center;
+	  }
+	  .fn {
+	  font-weight: bold;
+	  }
+	  .hidden {
+	  display: none;
+	  }
+	  .left {
+	  text-align: left;
+	  }
+	  .right {
+	  text-align: right;
+	  }
+	  .title {
+	  color: #990000;
+	  font-size: 18pt;
+	  line-height: 18pt;
+	  font-weight: bold;
+	  text-align: center;
+	  margin-top: 36pt;
+	  }
+	  .vcardline {
+	  display: block;
+	  }
+	  .warning {
+	  font-size: 14pt;
+	  background-color: yellow;
+	  }
+	
+	
+	  @media print {
+	  .noprint {
+		display: none;
+	  }
+	
+	  a {
+		color: black;
+		text-decoration: none;
+	  }
+	
+	  table.header {
+		width: 90%;
+	  }
+	
+	  td.header {
+		width: 50%;
+		color: black;
+		background-color: white;
+		vertical-align: top;
+		font-size: 12pt;
+	  }
+	
+	  ul.toc a::after {
+		content: leader('.') target-counter(attr(href), page);
+	  }
+	
+	  ul.ind li li a {
+		content: target-counter(attr(href), page);
+	  }
+	
+	  .print2col {
+		column-count: 2;
+		-moz-column-count: 2;
+		column-fill: auto;
+	  }
+	  }
+	
+	  @page {
+	  @top-left {
+		   content: "Internet-Draft"; 
+	  } 
+	  @top-right {
+		   content: "December 2010"; 
+	  } 
+	  @top-center {
+		   content: "Abbreviated Title";
+	  } 
+	  @bottom-left {
+		   content: "Doe"; 
+	  } 
+	  @bottom-center {
+		   content: "Expires June 2011"; 
+	  } 
+	  @bottom-right {
+		   content: "[Page " counter(page) "]"; 
+	  } 
+	  }
+	
+	  @page:first { 
+		@top-left {
+		  content: normal;
+		}
+		@top-right {
+		  content: normal;
+		}
+		@top-center {
+		  content: normal;
+		}
+	  }
+  /*]]>*/
+  </style>
+
+  <link href="#rfc.toc" rel="Contents">
+<link href="#rfc.section.1" rel="Chapter" title="1 Introduction">
+<link href="#rfc.section.2" rel="Chapter" title="2 Conventions and Terminology">
+<link href="#rfc.section.3" rel="Chapter" title="3 COSE digest container">
+<link href="#rfc.section.3.1" rel="Chapter" title="3.1 How to compute and verify a Digest">
+<link href="#rfc.section.4" rel="Chapter" title="4 Distributing Firmware">
+<link href="#rfc.section.5" rel="Chapter" title="5 Workflow of a device applying a firmware update">
+<link href="#rfc.section.6" rel="Chapter" title="6 The SUIT Manifest">
+<link href="#rfc.section.6.1" rel="Chapter" title="6.1 Severable Elements">
+<link href="#rfc.section.6.2" rel="Chapter" title="6.2 Conventions">
+<link href="#rfc.section.6.3" rel="Chapter" title="6.3 Payloads">
+<link href="#rfc.section.7" rel="Chapter" title="7 Manifest Structure">
+<link href="#rfc.section.7.1" rel="Chapter" title="7.1 Outer wrapper">
+<link href="#rfc.section.7.2" rel="Chapter" title="7.2 Manifest">
+<link href="#rfc.section.7.3" rel="Chapter" title="7.3 DependencyInfo">
+<link href="#rfc.section.7.4" rel="Chapter" title="7.4 PayloadInfo">
+<link href="#rfc.section.7.5" rel="Chapter" title="7.5 PreInstallationInfo">
+<link href="#rfc.section.7.6" rel="Chapter" title="7.6 PreCondition">
+<link href="#rfc.section.7.7" rel="Chapter" title="7.7 Identifiers">
+<link href="#rfc.section.7.7.1" rel="Chapter" title="7.7.1 Creating UUIDs:">
+<link href="#rfc.section.7.8" rel="Chapter" title="7.8 PreDirective">
+<link href="#rfc.section.7.9" rel="Chapter" title="7.9 InstallationInfo">
+<link href="#rfc.section.7.10" rel="Chapter" title="7.10 Processor">
+<link href="#rfc.section.7.10.1" rel="Chapter" title="7.10.1 Resource">
+<link href="#rfc.section.7.10.2" rel="Chapter" title="7.10.2 Cipher">
+<link href="#rfc.section.7.10.3" rel="Chapter" title="7.10.3 Compress">
+<link href="#rfc.section.7.10.4" rel="Chapter" title="7.10.4 Relocate">
+<link href="#rfc.section.7.10.5" rel="Chapter" title="7.10.5 BinText">
+<link href="#rfc.section.7.10.6" rel="Chapter" title="7.10.6 Object">
+<link href="#rfc.section.7.11" rel="Chapter" title="7.11 PostInstallationInfo">
+<link href="#rfc.section.8" rel="Chapter" title="8 Complete CDDL">
+<link href="#rfc.section.9" rel="Chapter" title="9 Examples">
+<link href="#rfc.section.9.1" rel="Chapter" title="9.1 ECDSA secp256r1-signed manifest with one payload">
+<link href="#rfc.section.9.2" rel="Chapter" title="9.2 A ECDSA-signed raw binary payload with conditions, text, and installationInfo">
+<link href="#rfc.section.10" rel="Chapter" title="10 IANA Considerations">
+<link href="#rfc.section.11" rel="Chapter" title="11 Security Considerations">
+<link href="#rfc.section.12" rel="Chapter" title="12 Mailing List Information">
+<link href="#rfc.section.13" rel="Chapter" title="13 Acknowledgements">
+<link href="#rfc.references" rel="Chapter" title="14 References">
+<link href="#rfc.references.1" rel="Chapter" title="14.1 Normative References">
+<link href="#rfc.references.2" rel="Chapter" title="14.2 Informative References">
+<link href="#rfc.authors" rel="Chapter">
+
+
+  <meta name="generator" content="xml2rfc version 2.11.1 - https://tools.ietf.org/tools/xml2rfc" />
+  <link rel="schema.dct" href="http://purl.org/dc/terms/" />
+
+  <meta name="dct.creator" content="Moran, B. and H. Tschofenig" />
+  <meta name="dct.identifier" content="urn:ietf:id:draft-moran-suit-manifest-03" />
+  <meta name="dct.issued" scheme="ISO8601" content="2018-10-19" />
+  <meta name="dct.abstract" content="This specification describes the format of a manifest.  A manifest is a bundle of metadata about the firmware for an IoT device, where to find the firmware, the devices to which it applies, and cryptographic information protecting the manifest." />
+  <meta name="description" content="This specification describes the format of a manifest.  A manifest is a bundle of metadata about the firmware for an IoT device, where to find the firmware, the devices to which it applies, and cryptographic information protecting the manifest." />
+
+</head>
+
+<body>
+
+  <table class="header">
+    <tbody>
+    
+    	<tr>
+<td class="left">SUIT</td>
+<td class="right">B. Moran</td>
+</tr>
+<tr>
+<td class="left">Internet-Draft</td>
+<td class="right">H. Tschofenig</td>
+</tr>
+<tr>
+<td class="left">Intended status: Informational</td>
+<td class="right">ARM Limited</td>
+</tr>
+<tr>
+<td class="left">Expires: April 22, 2019</td>
+<td class="right">October 19, 2018</td>
+</tr>
+
+    	
+    </tbody>
+  </table>
+
+  <p class="title">SUIT CBOR manifest serialisation format<br />
+  <span class="filename">draft-moran-suit-manifest-03</span></p>
+  
+  <h1 id="rfc.abstract"><a href="#rfc.abstract">Abstract</a></h1>
+<p>This specification describes the format of a manifest.  A manifest is a bundle of metadata about the firmware for an IoT device, where to find the firmware, the devices to which it applies, and cryptographic information protecting the manifest.</p>
+<h1 id="rfc.status"><a href="#rfc.status">Status of This Memo</a></h1>
+<p>This Internet-Draft is submitted in full conformance with the provisions of BCP 78 and BCP 79.</p>
+<p>Internet-Drafts are working documents of the Internet Engineering Task Force (IETF).  Note that other groups may also distribute working documents as Internet-Drafts.  The list of current Internet-Drafts is at https://datatracker.ietf.org/drafts/current/.</p>
+<p>Internet-Drafts are draft documents valid for a maximum of six months and may be updated, replaced, or obsoleted by other documents at any time.  It is inappropriate to use Internet-Drafts as reference material or to cite them other than as "work in progress."</p>
+<p>This Internet-Draft will expire on April 22, 2019.</p>
+<h1 id="rfc.copyrightnotice"><a href="#rfc.copyrightnotice">Copyright Notice</a></h1>
+<p>Copyright (c) 2018 IETF Trust and the persons identified as the document authors.  All rights reserved.</p>
+<p>This document is subject to BCP 78 and the IETF Trust's Legal Provisions Relating to IETF Documents (https://trustee.ietf.org/license-info) in effect on the date of publication of this document.  Please review these documents carefully, as they describe your rights and restrictions with respect to this document.  Code Components extracted from this document must include Simplified BSD License text as described in Section 4.e of the Trust Legal Provisions and are provided without warranty as described in the Simplified BSD License.</p>
+<p>This document may contain material from IETF Documents or IETF Contributions published or made publicly available before November 10, 2008.  The person(s) controlling the copyright in some of this material may not have granted the IETF Trust the right to allow modifications of such material outside the IETF Standards Process. Without obtaining an adequate license from the person(s) controlling the copyright in such materials, this document may not be modified outside the IETF Standards Process, and derivative works of it may not be created outside the IETF Standards Process, except to format it for publication as an RFC or to translate it into languages other than English.</p>
+
+  
+  <hr class="noprint" />
+  <h1 class="np" id="rfc.toc"><a href="#rfc.toc">Table of Contents</a></h1>
+  <ul class="toc">
+
+  	<li>1.   <a href="#rfc.section.1">Introduction</a>
+</li>
+<li>2.   <a href="#rfc.section.2">Conventions and Terminology</a>
+</li>
+<li>3.   <a href="#rfc.section.3">COSE digest container</a>
+</li>
+<ul><li>3.1.   <a href="#rfc.section.3.1">How to compute and verify a Digest</a>
+</li>
+</ul><li>4.   <a href="#rfc.section.4">Distributing Firmware</a>
+</li>
+<li>5.   <a href="#rfc.section.5">Workflow of a device applying a firmware update</a>
+</li>
+<li>6.   <a href="#rfc.section.6">The SUIT Manifest</a>
+</li>
+<ul><li>6.1.   <a href="#rfc.section.6.1">Severable Elements</a>
+</li>
+<li>6.2.   <a href="#rfc.section.6.2">Conventions</a>
+</li>
+<li>6.3.   <a href="#rfc.section.6.3">Payloads</a>
+</li>
+</ul><li>7.   <a href="#rfc.section.7">Manifest Structure</a>
+</li>
+<ul><li>7.1.   <a href="#rfc.section.7.1">Outer wrapper</a>
+</li>
+<li>7.2.   <a href="#rfc.section.7.2">Manifest</a>
+</li>
+<li>7.3.   <a href="#rfc.section.7.3">DependencyInfo</a>
+</li>
+<li>7.4.   <a href="#rfc.section.7.4">PayloadInfo</a>
+</li>
+<li>7.5.   <a href="#rfc.section.7.5">PreInstallationInfo</a>
+</li>
+<li>7.6.   <a href="#rfc.section.7.6">PreCondition</a>
+</li>
+<li>7.7.   <a href="#rfc.section.7.7">Identifiers</a>
+</li>
+<ul><li>7.7.1.   <a href="#rfc.section.7.7.1">Creating UUIDs:</a>
+</li>
+</ul><li>7.8.   <a href="#rfc.section.7.8">PreDirective</a>
+</li>
+<li>7.9.   <a href="#rfc.section.7.9">InstallationInfo</a>
+</li>
+<li>7.10.   <a href="#rfc.section.7.10">Processor</a>
+</li>
+<ul><li>7.10.1.   <a href="#rfc.section.7.10.1">Resource</a>
+</li>
+<li>7.10.2.   <a href="#rfc.section.7.10.2">Cipher</a>
+</li>
+<li>7.10.3.   <a href="#rfc.section.7.10.3">Compress</a>
+</li>
+<li>7.10.4.   <a href="#rfc.section.7.10.4">Relocate</a>
+</li>
+<li>7.10.5.   <a href="#rfc.section.7.10.5">BinText</a>
+</li>
+<li>7.10.6.   <a href="#rfc.section.7.10.6">Object</a>
+</li>
+</ul><li>7.11.   <a href="#rfc.section.7.11">PostInstallationInfo</a>
+</li>
+</ul><li>8.   <a href="#rfc.section.8">Complete CDDL</a>
+</li>
+<li>9.   <a href="#rfc.section.9">Examples</a>
+</li>
+<ul><li>9.1.   <a href="#rfc.section.9.1">ECDSA secp256r1-signed manifest with one payload</a>
+</li>
+<li>9.2.   <a href="#rfc.section.9.2">A ECDSA-signed raw binary payload with conditions, text, and installationInfo</a>
+</li>
+</ul><li>10.   <a href="#rfc.section.10">IANA Considerations</a>
+</li>
+<li>11.   <a href="#rfc.section.11">Security Considerations</a>
+</li>
+<li>12.   <a href="#rfc.section.12">Mailing List Information</a>
+</li>
+<li>13.   <a href="#rfc.section.13">Acknowledgements</a>
+</li>
+<li>14.   <a href="#rfc.references">References</a>
+</li>
+<ul><li>14.1.   <a href="#rfc.references.1">Normative References</a>
+</li>
+<li>14.2.   <a href="#rfc.references.2">Informative References</a>
+</li>
+</ul><li><a href="#rfc.authors">Authors' Addresses</a>
+</li>
+
+
+  </ul>
+
+  <h1 id="rfc.section.1">
+<a href="#rfc.section.1">1.</a> <a href="#introduction" id="introduction">Introduction</a>
+</h1>
+<p id="rfc.section.1.p.1">A firmware update mechanism is an essential security feature for IoT devices to deal with vulnerabilities. While the transport of firmware images to the devices themselves is important there are already various techniques available, such as the Lightweight Machine-to-Machine (LwM2M) protocol offering device management of IoT devices. Equally important is the inclusion of meta-data about the conveyed firmware image (in the form of a manifest) and the use of end-to-end security protection to detect modifications and (optionally) to make reverse engineering more difficult. End-to-end security allows the author, who builds the firmware image, to be sure that no other party (including potential adversaries) can install firmware updates on IoT devices without adequate privileges. This authorization process is ensured by the use of dedicated symmetric or asymmetric keys installed on the IoT device: for use cases where only integrity protection is required it is sufficient to install a trust anchor on the IoT device. For confidentiality protected firmware images it is additionally required to install either one or multiple symmetric or asymmetric keys on the IoT device. Starting security protection at the author is a risk mitigation technique so firmware images and manifests can be stored on untrusted respositories; it also reduces the scope of a compromise of any repository or intermediate system to be no worse than a denial of service.</p>
+<p id="rfc.section.1.p.2">It is assumed that the reader is familiar with the high-level firmware update architecture <a href="#Architecture" class="xref">[Architecture]</a>. This document is structured as follows: In <a href="#the-suit-manifest" class="xref">Section 6</a> we describe the main building blocks of the manifest and <a href="#manifest-structure" class="xref">Section 7</a> contains the description of the CBOR of the manifest.</p>
+<h1 id="rfc.section.2">
+<a href="#rfc.section.2">2.</a> <a href="#conventions-and-terminology" id="conventions-and-terminology">Conventions and Terminology</a>
+</h1>
+<p id="rfc.section.2.p.1">The key words &#8220;MUST&#8221;, &#8220;MUST NOT&#8221;, &#8220;REQUIRED&#8221;, &#8220;SHALL&#8221;, &#8220;SHALL NOT&#8221;, &#8220;SHOULD&#8221;, &#8220;SHOULD NOT&#8221;, &#8220;RECOMMENDED&#8221;, &#8220;NOT RECOMMENDED&#8221;, &#8220;MAY&#8221;, and &#8220;OPTIONAL&#8221; in this document are to be interpreted as described in RFC 2119 <a href="#RFC2119" class="xref">[RFC2119]</a>.</p>
+<p></p>
+
+<ul>
+<li>SUIT: Sofware Update for the Internet of Things, the IETF working group for this standard.</li>
+<li>Payload: A piece of information to be delivered. Typically Firmware for the purposes of SUIT.</li>
+<li>Resource: A piece of information that is used to construct a payload.</li>
+<li>Processor: A component that transforms one or more Resources into another resource or into a payload.</li>
+<li>Manifest: A piece of information that describes one or more payloads, one or more resources, and the processors needed to transform resources into payloads.</li>
+<li>Update: One or more manifests that describe one or more payloads.</li>
+<li>Update Authority: The owner of a cryptographic key used to sign updates, trusted by recipient devices.</li>
+</ul>
+<h1 id="rfc.section.3">
+<a href="#rfc.section.3">3.</a> <a href="#cose-digest-container" id="cose-digest-container">COSE digest container</a>
+</h1>
+<p id="rfc.section.3.p.1">RFC 8152 <a href="#RFC8152" class="xref">[RFC8152]</a> provides containers for signature, MAC, and encryption, but no basic digest container. The container needed for a digest is identical to a COSE_Mac0 structure, so no new container is defined.</p>
+<p><samp>CDDL COSE_Digest_Tagged = #6.19(COSE_Digest)   ; 19 is a placeholder. Value TBD COSE_Digest = COSE_Mac0 </samp></p>
+<h2 id="rfc.section.3.1">
+<a href="#rfc.section.3.1">3.1.</a> <a href="#how-to-compute-and-verify-a-digest" id="how-to-compute-and-verify-a-digest">How to compute and verify a Digest</a>
+</h2>
+<p id="rfc.section.3.1.p.1">In order to get a consistent encoding of the data to be digested, the Digest_structure is used to have a canonical form. The Digest_structure is a CBOR array.  The fields of the Digest_structure in order are:</p>
+<p></p>
+
+<ol>
+<li>A text string that identifies the structure that is being encoded. This string is &#8220;Digest&#8221;.</li>
+<li>The protected attributes from the COSE_Digest structure. If there are no protected attributes, a zero-length bstr is used.</li>
+<li>The protected attributes from the application encoded as a bstr type.  If this field is not supplied, it defaults to a zero-length binary string.  (See RFC 8152 <a href="#RFC8152" class="xref">[RFC8152]</a>, Section 4.3 for application UUIDance on constructing this field.)</li>
+<li>The payload to be digested encoded in a bstr type.  The payload is placed here independent of how it is transported.</li>
+</ol>
+<p id="rfc.section.3.1.p.3">The CDDL fragment that corresponds to the above text is:</p>
+<p><samp>CDDL Digest_structure = [ context : "Digest", protected : empty_or_serialized_map, external_aad : bstr, payload : bstr ] </samp></p>
+<p id="rfc.section.3.1.p.5">The steps to compute a Digest are:</p>
+<p></p>
+
+<ol>
+<li>Create a Digest_structure and populate it with the appropriate fields.</li>
+<li>Create the value ToBeDigested by encoding the Digest_structure to a byte stream, using the encoding described in RFC 8152 <a href="#RFC8152" class="xref">[RFC8152]</a>, Section 14.</li>
+<li>Call the Digest creation algorithm passing in alg (the algorithm to Digest with), and ToBeDigested (the value to compute the digest on).</li>
+<li>Place the resulting Digest in the &#8216;tag&#8217; field of the COSE_Digest structure.</li>
+</ol>
+<p id="rfc.section.3.1.p.7">The steps to verify a Digest are:</p>
+<p></p>
+
+<ol>
+<li>Create a Digest_structure object and populate it with the appropriate fields.</li>
+<li>Create the value ToBeDigested by encoding the Digest_structure to a byte stream, using the encoding described in RFC 8152 <a href="#RFC8152" class="xref">[RFC8152]</a>, Section 14.</li>
+<li>Call the digest creation algorithm passing in alg (the algorithm to digest with), and ToBeDigested (the value to compute the Digest on).</li>
+<li>Compare the digest value to the &#8216;tag&#8217; field of the COSE_Digest structure.</li>
+</ol>
+<table cellpadding="3" cellspacing="0" class="tt full center">
+<thead><tr>
+<th class="left">Name</th>
+<th class="left">Value</th>
+</tr></thead>
+<tbody>
+<tr>
+<td class="left">SHA-224</td>
+<td class="left">40</td>
+</tr>
+<tr>
+<td class="left">SHA-256</td>
+<td class="left">41</td>
+</tr>
+<tr>
+<td class="left">SHA-384</td>
+<td class="left">42</td>
+</tr>
+<tr>
+<td class="left">SHA-512</td>
+<td class="left">43</td>
+</tr>
+<tr>
+<td class="left">SHA3-224</td>
+<td class="left">44</td>
+</tr>
+<tr>
+<td class="left">SHA3-256</td>
+<td class="left">45</td>
+</tr>
+<tr>
+<td class="left">SHA3-384</td>
+<td class="left">46</td>
+</tr>
+<tr>
+<td class="left">SHA3-512</td>
+<td class="left">47</td>
+</tr>
+</tbody>
+</table>
+<p id="rfc.section.3.1.p.9">N.B. Values are provisional, pending review.</p>
+<h1 id="rfc.section.4">
+<a href="#rfc.section.4">4.</a> <a href="#distributing-firmware" id="distributing-firmware">Distributing Firmware</a>
+</h1>
+<p id="rfc.section.4.p.1">Distributing firmware in a multi-party environment is a difficult operation. Each party requires a different subset of data. Some data may not be accessible to all parties. Multiple signatures may be required from parties with different authority. This topic is covered in more depth in <a href="#Architecture" class="xref">[Architecture]</a></p>
+<h1 id="rfc.section.5">
+<a href="#rfc.section.5">5.</a> <a href="#workflow-of-a-device-applying-a-firmware-update" id="workflow-of-a-device-applying-a-firmware-update">Workflow of a device applying a firmware update</a>
+</h1>
+<p id="rfc.section.5.p.1">The manifest is designed to work with a pull parser, where each section of the manifest is used in sequence. The expected workflow for a device installing a manifest is as follows:</p>
+<p></p>
+
+<ol>
+<li>Verify the signature of the manifest</li>
+<li>Verify the applicability of the manifest (verify PreConditions)</li>
+<li>Verify that all installation processors are available</li>
+<li>Verify that all dependencies are met</li>
+<li>Run PreInstalation Directives</li>
+<li>Load the descriptor for the next payload to be installed</li>
+<li>Load installation descriptor for the next payload to be installed</li>
+<li>Install the payload</li>
+<li>While there are more payloads to install, go to 5.</li>
+<li>Validate PostInstallation Conditions</li>
+<li>Run PostInstallation Directives</li>
+</ol>
+<p id="rfc.section.5.p.3">When multiple manifests are used for an update, the pull parser is not possible to orchestrate in the same manner.</p>
+<h1 id="rfc.section.6">
+<a href="#rfc.section.6">6.</a> <a href="#the-suit-manifest" id="the-suit-manifest">The SUIT Manifest</a>
+</h1>
+<p id="rfc.section.6.p.1">The SUIT manifest can be used for a variety of purposes throughout its lifecycle. The manifest allows:</p>
+<p></p>
+
+<ol>
+<li>the Firmware Author to reason about releasing a firmware.</li>
+<li>the Network Operator to reason about compatibility of a firmware.</li>
+<li>the Device Operator to reason about the impact of a firmware.</li>
+<li>the Device Operator to manage distribution of firmware to devices.</li>
+<li>the Plant Manager to reason about timing and acceptance of firmware updates.</li>
+<li>the device to reason about the authority &amp; authenticity of a firmware prior to installation.</li>
+<li>the device to reason about the applicability of a firmware.</li>
+<li>the device to reason about the installation of a firmware.</li>
+<li>the device to reason about the authenticity of a firmware at boot.</li>
+</ol>
+<p id="rfc.section.6.p.3">Each of these uses happens at a different stage of the manifest lifecycle, so each has different requirements.</p>
+<p id="rfc.section.6.p.4">To verify authenticity at boot time, only the smallest portion of the manifest is required. This core part of the manifest describes only the fully installed firmware and any of its dependencies.</p>
+<h2 id="rfc.section.6.1">
+<a href="#rfc.section.6.1">6.1.</a> <a href="#severable-elements" id="severable-elements">Severable Elements</a>
+</h2>
+<p id="rfc.section.6.1.p.1">Because the manifest can be used by different actors at different times, some parts of the manifest can be removed without affecting later stages of the lifecycle. This is called &#8220;Severing.&#8221; Severing of information is achieved by separating that information from the signed container so that removing it does not affect the signature. This means that ensuring authenticity of severable parts of the manifest is a requirement for the signed portion of the manifest. Severing some parts makes it possible to discard parts of the manifest that are no longer necessary. This is important because it allows the storage used by the manifest to be greatly reduced. For example, no text size limits are needed if text is removed from the manifest prior to delivery to a constrained device.</p>
+<p id="rfc.section.6.1.p.2">Elements are made severable by removing them from the manifest, encoding them in a bstr, and placing a COSE_Digest of the bstr in the manifest so that they can still be authenticated. The COSE_Digest typically consumes 10 bytes more than the size of the raw digest, therefore elements smaller than (Digest Bits)/8 + 10 SHOULD never be severable. Elements larger than (Digest Bits)/8 + 10 MAY be severable, while elements that are much larger than (Digest Bits)/8 + 10 SHOULD be severable.</p>
+<h2 id="rfc.section.6.2">
+<a href="#rfc.section.6.2">6.2.</a> <a href="#conventions" id="conventions">Conventions</a>
+</h2>
+<p id="rfc.section.6.2.p.1">The map indices in this encoding are reset to 1 for each map within the structure. This is to keep the indices as small as possible. The goal is to keep the index objects to single bytes (CBOR positive integers 1-23).</p>
+<p id="rfc.section.6.2.p.2">Wherever enumerations are used, they are started at 1. This allows detection of several common software errors that are caused by uninitialised variables. Positive numbers in enumerations are reserved for IANA registration. Negative numbers are used to identify application-specific implementations.</p>
+<p id="rfc.section.6.2.p.3">CDDL names are lowerCamelCase and CDDL structures are UpperCamelCase so that these names can be directly transcribed into most common programming languages, whereas hyphens require translation and CDDL prefers hyphens to underscores.</p>
+<h2 id="rfc.section.6.3">
+<a href="#rfc.section.6.3">6.3.</a> <a href="#payloads" id="payloads">Payloads</a>
+</h2>
+<p id="rfc.section.6.3.p.1">Payloads can take many forms, for example, binary, hex, s-record, elf, binary diff, PEM certificate, CBOR Web Token, serialised configuration. These payloads fall into two broad categories: those that require installation-time processing and those that do not. Binary, PEM certificate, and CBOR Web Token do not require installation-time processing. Hex, s-record, elf, and serialised configuration require installation-time processing. Binary diff is a special case that can be handled either in a pre-processing step or in an installation-time step, depending on the architectural requirements of the application.</p>
+<p id="rfc.section.6.3.p.2">Some payloads cannot be directly converted to a writable binary stream. Hex, s-record, and elf may contain gaps and they have no guarantee of monotonic increase of address, which makes pre-processing them into a binary stream difficult on constrained platforms. Serialised configuration may be unpacked into a configuration database, which makes it impossible to preprocess into a binary stream, suitable for direct writing.</p>
+<p id="rfc.section.6.3.p.3">This presents two problems for the manifest: first, it must indicate that a specialised installer is needed and, second, it cannot provide a hash of the payload that is checkable after installation. These two problems are resolved in the payloadInstaller and payloadInfo sections, respectively.</p>
+<p id="rfc.section.6.3.p.4">Where a specialised installer is needed, a digest is not always calculable over an installed payload. For example, an elf, s-record or hex file may contain gaps that can contain any data, while not changing whether or not an installed payload is valid. Serialised configuration may update only some device data rather than all of it. This means that the digest cannot always be calculated over an installed payload when a specialised installer is used.</p>
+<h1 id="rfc.section.7">
+<a href="#rfc.section.7">7.</a> <a href="#manifest-structure" id="manifest-structure">Manifest Structure</a>
+</h1>
+<p id="rfc.section.7.p.1">The manifest is divided into several sections in a hierarchy as follows:</p>
+<p></p>
+
+<ol><li>The outer wrapper <ol>
+<li>The authentication wrapper</li>
+<li>The manifest <ol>
+<li>Critical Information</li>
+<li>Pre-installation Information /  Reference</li>
+<li>Payloads</li>
+<li>Installation Information / Reference</li>
+<li>Post-installation Information / Reference</li>
+<li>Text / Reference</li>
+<li>COSWID / Reference</li>
+</ol>
+</li>
+<li>Pre-installation Information</li>
+<li>Installation Information</li>
+<li>Post-installation Information</li>
+<li>Text</li>
+</ol>
+</li></ol>
+<h2 id="rfc.section.7.1">
+<a href="#rfc.section.7.1">7.1.</a> <a href="#outer-wrapper" id="outer-wrapper">Outer wrapper</a>
+</h2>
+<p id="rfc.section.7.1.p.1">This container is just a holder for the other pieces of the manifest. The CDDL that describes the wrapper is below:</p>
+<p id="rfc.section.7.1.p.2">```CDDL OuterWrapper = { authenticationWrapper: AuthenticationWrapper, manifest:              bstr .cbor Manifest, ? preInstallExt:       bstr .cbor PreInstallationInfo, ? installExt:          bstr .cbor InstallationInfo, ? postInstallExt:      bstr .cbor PostInstallationInfo, ? textInfoExt:         bstr .cbor Text, ? coswidExt:           bstr .cbor concise-software-identity } authenticationWrapper = 1 manifest = 2 preInstallExt = 3 installExt = 4 postInstallExt = 5 textExt = 6 coswidExt = 7</p>
+<p id="rfc.section.7.1.p.3">AuthenticationWrapper = COSE_Mac_Tagged / COSE_Sign_Tagged / COSE_Mac0_Tagged / COSE_Sign1_Tagged ```</p>
+<p id="rfc.section.7.1.p.4">The authenticationWrapper contains a cryptographic authentication wrapper for the core part of the manifest. This is implemented as a COSE_Mac_Tagged or COSE_Sign_Tagged block. The Manifest is authenticated by this block in &#8220;detached payload&#8221; mode. The COSE_Mac_Tagged and COSE_Sign_Tagged blocks are described in RFC 8152 <a href="#RFC8152" class="xref">[RFC8152]</a> and are beyond the scope of this document. The AuthenticationWrapper MUST come first in the OuterWrapper, regardless of canonical encoding of CBOR. All validators MUST reject any OuterWrapper that begins with any element other than an AuthenticationWrapper.</p>
+<p id="rfc.section.7.1.p.5">Every other element must be wrapped in a bstr to minimize the complexity of the code that evaluates the cryptographic integrity of the element and to ensure correct serialisation for integrity and authenticity checks.</p>
+<p id="rfc.section.7.1.p.6">manifest contains a Manifest structure, which describes the payload(s) to be installed and any dependencies on other manifests.</p>
+<p id="rfc.section.7.1.p.7">PreInstallationInfo provides all the information that a device needs in order to decide whether and when to install an update</p>
+<p id="rfc.section.7.1.p.8">InstallationInfo provides all the information that a device needs in order to process one or more resources into one or more payloads.</p>
+<p id="rfc.section.7.1.p.9">PostInstallationInfo provides the information that a device needs to verify that a payload has been installed correctly, any instructions for what to do after the payload has been installed, for example migration tools.</p>
+<p id="rfc.section.7.1.p.10">Text contains all the human-readable information that describes any and all parts of the manifest, its payload(s) and its resource(s).</p>
+<h2 id="rfc.section.7.2">
+<a href="#rfc.section.7.2">7.2.</a> <a href="#manifest" id="manifest">Manifest</a>
+</h2>
+<p id="rfc.section.7.2.p.1">The manifest describes the critical metadata for the referenced payload(s). In addition, it contains:</p>
+<p></p>
+
+<ol>
+<li>a version number for the manifest structure itself</li>
+<li>a sequence number</li>
+<li>a list of dependencies</li>
+<li>a list of payloads</li>
+<li>a reference for each of the severable blocks.</li>
+</ol>
+<p id="rfc.section.7.2.p.3">The following CDDL fragment defines the manifest.</p>
+<p id="rfc.section.7.2.p.4">```CDDL Manifest = { manifestVersion : 1, sequence        : SequenceNumber, ? preInstall    : PreInstallationInfo / COSE_Digest, ? dependencies  : [* DependencyInfo], ? payloads      : [* PayloadInfo], ? install       : InstallationInfo / COSE_Digest, ? postInstall   : PostInstallationInfo / COSE_Digest, ? text          : TextInfo / COSE_Digest, ? coswid        : concise-software-identity / COSE_Digest }</p>
+<p id="rfc.section.7.2.p.5">manifestVersion = 1 sequence        = 2 preInstall      = 3 dependencies    = 4 payloads        = 5 install         = 6 postInstall     = 7 text            = 8 coswid          = 9</p>
+<p id="rfc.section.7.2.p.6">SequenceNumber = uint</p>
+<p id="rfc.section.7.2.p.7">```</p>
+<p id="rfc.section.7.2.p.8">Several fields in the Manifest can be either a CBOR structure or a COSE_Digest. In each of these cases, the COSE_Digest provides for a severable field. Severable fields are RECOMMENDED to implement. In particular, text SHOULD be severable, since most useful text elements occupy more space than a COSE_Digest, but are not needed by recipient devices. Because COSE_Digest is a CBOR Array and each severable element is a CBOR Map, it is straight-forward for a recipient to determine whether an element has been severed.</p>
+<p id="rfc.section.7.2.p.9">The manifestVersion indicates the version of serialisation used to encode the manifest. Version 1 is the version described in this document. manifestVersion is MANDATORY.</p>
+<p id="rfc.section.7.2.p.10">The sequence number is an anti-rollback counter. It also helps devices to determine which in a set of manifests is the &#8220;root&#8221; manifest in a given update. Each manifest MUST have a sequence number higher than each of its dependencies. It MAY be convenient to use a UTC timestamp in seconds as the sequence number. SequenceNumber is MANDATORY.</p>
+<p id="rfc.section.7.2.p.11">preInstall is a digest that uniquely identifies the content of the PreInstallationInfo that is packaged in the OuterWrapper. preInstall is OPTIONAL within a given Manifest. There MUST be one preInstall in at least one Manifest within an Update because PreInstallationInfo contains the conditions that define the applicability of the Update to specific hardware/firmware versions. preInstall MAY be severable.</p>
+<p id="rfc.section.7.2.p.12">dependencies is a list of DependencyInfo blocks that specify manifests that must be present before the current manifest can be processed. dependencies is OPTIONAL.</p>
+<p id="rfc.section.7.2.p.13">payloads is a list of PayloadInfo blocks that describe the payloads to be installed. payloads is OPTIONAL.</p>
+<p id="rfc.section.7.2.p.14">install is a digest that uniquely identifies the content of the InstallationInfo that is packaged in the OuterWrapper. install is OPTIONAL. install MAY</p>
+<p id="rfc.section.7.2.p.15">postInstall is a digest that uniquely identifies the content of the PostInstallationInfo that is packaged in the OuterWrapper. postInstall is OPTIONAL.</p>
+<p id="rfc.section.7.2.p.16">text is a digest that uniquely identifies the content of the Text that is packaged in the OuterWrapper. text is OPTIONAL.</p>
+<p id="rfc.section.7.2.p.17">coswid is a digest that uniquely identifies the content of the concise-software-identifier that is packaged in the OuterWrapper. coswid is OPTIONAL.</p>
+<h2 id="rfc.section.7.3">
+<a href="#rfc.section.7.3">7.3.</a> <a href="#dependencyinfo" id="dependencyinfo">DependencyInfo</a>
+</h2>
+<p id="rfc.section.7.3.p.1">DependencyInfo specifies a manifest that describes one or more dependencies of the current manifest.</p>
+<p id="rfc.section.7.3.p.2">The following CDDL describes the DependencyInfo structure.</p>
+<p id="rfc.section.7.3.p.3">```CDDL DependencyInfo = { depDigest  : COSE_Digest,         ; digest of the resource depScope   : ComponentIdentifier, ; where the dependency&#8217;s payloads will be ; applied ? depUris  : UriList              ; where to find the resource } depDigest = 1 depScope  = 2 depUris   = 3</p>
+<p id="rfc.section.7.3.p.4">UriList = [ + [priority: int, uri: tstr] ] ComponentIdentifier = [* bstr] ```</p>
+<p id="rfc.section.7.3.p.5">The depDigest specifies the dependency manifest uniquely by identifying a particular Manifest structure. The digest is calculated over the Manifest structure instead of the COSE Sig_structure or Mac_structure. This means that a digest may need to be calculated more than once, however this is necessary to ensure that removing a signature from a manifest does not break dependencies due to missing &#8216;body_protected&#8217; and &#8216;body_signed&#8217; elements. This is also necessary to support the trusted intermediary use case, where an intermediary re-signs the Manifest, removing the original signature, potentially with a different algorithm, or trading COSE_Sign for COSE_Mac.</p>
+<p id="rfc.section.7.3.p.6">The depUris element describes one or more indications of where to find the dependency. This element is OPTIONAL when the fetch location for a dependency is known implicitly.</p>
+<p id="rfc.section.7.3.p.7">The depScope element contains a ComponentIdentifier. This specifies the scope at which the dependency operates. This allows the dependency to be forwarded on to a component that is capable of parsing its own manifests. It also allows one manifest to be deployed to multiple dependent devices without those devices needing consistent component hierarchy. This element is MANDATORY.</p>
+<h2 id="rfc.section.7.4">
+<a href="#rfc.section.7.4">7.4.</a> <a href="#payloadinfo" id="payloadinfo">PayloadInfo</a>
+</h2>
+<p id="rfc.section.7.4.p.1">Payload Info describes a payload that is ready for installation. When representing a payload that requires a specialised installer, the Update Authority can provide information to regenerate a digest.</p>
+<p id="rfc.section.7.4.p.2">The following CDDL describes the PayloadInfo structure.</p>
+<p id="rfc.section.7.4.p.3">```CDDL PayloadInfo = { payloadComponent:       ComponentIdentifier, payloadSize:            uint / nil, payloadDigest:          COSE_Digest, ? regenInfo : { regenDigest:        COSE_Digest regenType:          int ? regenParameters:  bstr }, } payloadComponent = 1 payloadSize      = 2 payloadDigest    = 3 regenInfo        = 4 regenDigest      = 5 regenType        = 6 regenParameters  = 7</p>
+<p id="rfc.section.7.4.p.4">RegenType = LocationLengthRegenType / FileListRegenType / KeyListRegenType / CustomRegenType</p>
+<p id="rfc.section.7.4.p.5">LocationLengthRegenType = 1 FileListRegenType       = 2 KeyListRegenType        = 3 CustomRegenType         = nint</p>
+<p id="rfc.section.7.4.p.6">RegenParameters = LocationLengthRegenParameters / FileListRegenParameters / KeyListRegenParameters / CustomRegenParameters LocationLengthRegenParameters = [ * [ location: uint, length: uint ] ] FileListRegenParameters       = [ * file: tstr ] KeyListRegenParameters        = [ * key: tstr ] CustomRegenParameters         = bstr ```</p>
+<p id="rfc.section.7.4.p.7">The payloadComponent element contains a ComponentIdentifier. This specifies the module/component/location in which the payload should be installed. The meaning of ComponentIdentifier is application-specific. In general, the last bstr in the ComponentIdentifier defines where to store a payload within a given storage subsystem in a Heterogeneous Storage Architecture device, the remainder of the elements in the ComponentIdentifier define which storage subsystem to use to store the payload. payloadComponent is MANDATORY. When used on a single-image device payloadComponent MAY contain 0 elements. On multi-image devices, payloadComponent MUST contain at least one element.</p>
+<p id="rfc.section.7.4.p.8">payloadSize contains a positive integer that describes the size of the ready-to-install payload. Where the payload requires a specialised installer, this is the payload prior to installation. This element is MANDATORY.</p>
+<p id="rfc.section.7.4.p.9">payloadDigest contains a digest of the payload, prior to installation. For payloads that do not require a specialised installer, this is the also the post-installation digest. This element is MANDATORY.</p>
+<p id="rfc.section.7.4.p.10">regenInfo describes the mechanism for recreating a message digest of payload that requires a specialised installer. This element is OPTIONAL. This element is OPTIONAL TO IMPLEMENT.</p>
+<p id="rfc.section.7.4.p.11">regenDigest is a Digest that contains the message digest that an application should regenerate to verify the installed payload. This element is MANDATORY when regenInfo is present.</p>
+<p id="rfc.section.7.4.p.12">regenType is an int that identifies a particular mechanism for creating the regenDigest. This element is MANDATORY when regenInfo is present.</p>
+<p id="rfc.section.7.4.p.13">regenParameters is a bstr that provides any additional arguments needed by the specialised installer. This element is OPTIONAL.</p>
+<p id="rfc.section.7.4.p.14">When message digest regeneration is in place, regenType implies a regenParameters structure, as described in the following table:</p>
+<table cellpadding="3" cellspacing="0" class="tt full center">
+<thead><tr>
+<th class="left">regenType</th>
+<th class="left">RegenParameters</th>
+<th class="left">Description</th>
+</tr></thead>
+<tbody>
+<tr>
+<td class="left">0</td>
+<td class="left">-</td>
+<td class="left">Reserved</td>
+</tr>
+<tr>
+<td class="left">1</td>
+<td class="left">[ * [ location: uint, length: uint] ]</td>
+<td class="left">Lists a series of regions to include in the digest</td>
+</tr>
+<tr>
+<td class="left">2</td>
+<td class="left">[ * file: tstr ]</td>
+<td class="left">Lists a series of files to digest</td>
+</tr>
+<tr>
+<td class="left">3</td>
+<td class="left">[ * key: tstr ]</td>
+<td class="left">Lists a series of keys, whose values should be digested</td>
+</tr>
+</tbody>
+</table>
+<p id="rfc.section.7.4.p.15">Positive RegenType numbers are reserved for IANA registration. Negative numbers are reserved for proprietary, application-specific directives.</p>
+<h2 id="rfc.section.7.5">
+<a href="#rfc.section.7.5">7.5.</a> <a href="#preinstallationinfo" id="preinstallationinfo">PreInstallationInfo</a>
+</h2>
+<p id="rfc.section.7.5.p.1">The recipient processes the PreInstallationInfo in order to determine whether the manifest is applicable to it. This check is only needed once, so the PreInstallationInfo is severable.</p>
+<p id="rfc.section.7.5.p.2">The following CDDL describes the PreInstallationInfo structure.</p>
+<p><samp>CDDL PreInstallationInfo = { ? preConditions : [ * PreCondition ], ? preDirectives : [ * PreDirective ] } preConditions = 1 preDirectives = 2 </samp></p>
+<p id="rfc.section.7.5.p.4">preConditions contains a list of 0 or more PreCondition structures.</p>
+<p id="rfc.section.7.5.p.5">preDirectives contains a list of 0 or more PreDirective structures.</p>
+<h2 id="rfc.section.7.6">
+<a href="#rfc.section.7.6">7.6.</a> <a href="#precondition" id="precondition">PreCondition</a>
+</h2>
+<p id="rfc.section.7.6.p.1">PreCondition structures describe conditions that must be true in order for a manifest to be installed. The target device MUST check these conditions before any installation is performed. The target device MAY check these conditions prior to fetching any dependency manifests.</p>
+<p id="rfc.section.7.6.p.2">All updates MUST contain either a device IdCondition or both a vendor IdCondition and a class IdCondition. This is to ensure that firmware is only ever delivered to compatible devices.</p>
+<p id="rfc.section.7.6.p.3">The following CDDL describes the PreCondition structure.</p>
+<p id="rfc.section.7.6.p.4">```CDDL PreCondition    = IdCondition / TimeCondition / ImageCondition / BatteryLevelCondition / CustomCondition IdCondition     = [ vendor : 1, id: Uuid ] / [ class  : 2, id: Uuid ] / [ device : 3, id: Uuid ] Uuid = bstr .size 16</p>
+<p id="rfc.section.7.6.p.5">TimeCondition   = [useBy: 4, time:       Timestamp] ImageCondition  = [ currentContent :    6 ,<br> digest: COSE_Digest / nil, location: ComponentIdentifier ] / [ notCurrentContent : 7 ,<br> digest: COSE_Digest / nil, location: ComponentIdentifier ] BatteryLevelCondition = [ batteryLevel: 8, level: uint ] CustomCondition = [nint, parameters: bstr]</p>
+<p id="rfc.section.7.6.p.6">Timestamp       = uint ```</p>
+<p id="rfc.section.7.6.p.7">All PreConditions are serialised as a list of one integer and one or more parameters. The type of the parameters is dictated by the value of the integer. An update that has contradictory preConditions MUST be rejected.</p>
+<p id="rfc.section.7.6.p.8">IdCondition describes three conditions: the vendor ID condition, the class ID condition, and the device ID condition. Each of these conditions present a RFC 4122 <a href="#RFC4122" class="xref">[RFC4122]</a> UUID that MUST be matched by the installing device in order to consider the manifest valid.</p>
+<p id="rfc.section.7.6.p.9">A device MUST have at least one vendor ID and one class ID. A device MAY have one or more device IDs, more than one vendor ID, and/or more than one class ID.</p>
+<p id="rfc.section.7.6.p.10">TimeCondition describes one condition: the useBy condition, which can be used to specify the last time at which an update should be installed. The timestamp is encoded as a POSIX timestamp, that is seconds after 1970-01-01 00:00:00. Timestamp conditions MUST be evaluated in 64 bits, regardless of encoded CBOR size.</p>
+<p id="rfc.section.7.6.p.11">ImageCondition describes two conditions: the currentContent and the notCurrentContent conditions. Both of these conditions specify a storage identifier and a digest that the contents of that storage identifier should match.</p>
+<p id="rfc.section.7.6.p.12">BatteryLevelCondition provides a mechanism to test a device&#8217;s battery level before installing an update. This condition is for use in primary-cell applications, where the battery is only ever discharged. For batteries that are charged, BatteryLevelDirective is more appropriate, since it defines a &#8220;wait&#8221; until the battery level is sufficient to install the update. BatteryLevelCondition is specified in mWh.</p>
+<p id="rfc.section.7.6.p.13">CustomCondition describes any proprietary, application specific condition. This is encoded as a negative integer, chosen by the firmware developer, and a bstr that encodes the parameters passed to system that evaluates the condition matching that integer.</p>
+<p id="rfc.section.7.6.p.14">Positive Condition numbers are reserved for IANA registration. Negative numbers are reserved for proprietary, application-specific directives. When a negative number is used, the parameters MUST be wrapped in a bstr.</p>
+<h2 id="rfc.section.7.7">
+<a href="#rfc.section.7.7">7.7.</a> <a href="#identifiers" id="identifiers">Identifiers</a>
+</h2>
+<p id="rfc.section.7.7.p.1">Many conditions use identifiers to determine whether a manifest matches a given recipient or not. These identifiers are defined to be RFC 4122 <a href="#RFC4122" class="xref">[RFC4122]</a> UUIDs. These UUIDs are explicitly NOT human-readable. They are for machine-based matching only.</p>
+<p id="rfc.section.7.7.p.2">A device may match any number of UUIDs for vendor or class identifier. This may be relevant to physical or software modules. For example, a device that has an OS and one or more applications might list one Vendor ID for the OS and one or more additional Vendor IDs for the applications. This device might also have a Class ID that must be matched for the OS and one or more Class IDs for the applications.</p>
+<p id="rfc.section.7.7.p.3">A more complete example: A device has the following physical components: 1. A host MCU 2. A WiFi module</p>
+<p id="rfc.section.7.7.p.4">This same device has three software modules: 1. An operating system 2. A WiFi module interface driver 3. An application</p>
+<p id="rfc.section.7.7.p.5">Suppose that the WiFi module&#8217;s firmware has a proprietary update mechanism and doesn&#8217;t support manifest processing. This device can report four class IDs:</p>
+<p></p>
+
+<ol>
+<li>hardware model/revision</li>
+<li>OS</li>
+<li>WiFi module model/revision</li>
+<li>Application</li>
+</ol>
+<p id="rfc.section.7.7.p.7">This allows the OS, WiFi module, and application to be updated independently. To combat possible incompatibilities, the OS class ID can be changed each time the OS has a change to its API.</p>
+<p id="rfc.section.7.7.p.8">This approach allows a vendor to target, for example, all devices with a particular WiFi module with an update, which is a very powerful mechanism, particularly when used for security updates.</p>
+<h3 id="rfc.section.7.7.1">
+<a href="#rfc.section.7.7.1">7.7.1.</a> <a href="#creating-uuids" id="creating-uuids">Creating UUIDs:</a>
+</h3>
+<p id="rfc.section.7.7.1.p.1">UUIDs MUST be created according to RFC 4122 <a href="#RFC4122" class="xref">[RFC4122]</a>. UUIDs SHOULD use versions 3, 4, or 5, as described in RFC4122. Versions 1 and 2 do not provide a tangible benefit over version 4 for this application.</p>
+<p id="rfc.section.7.7.1.p.2">The RECOMMENDED method to create a vendor ID is: Vendor ID = UUID5(DNS_PREFIX, vendor domain name)</p>
+<p id="rfc.section.7.7.1.p.3">The RECOMMENDED method to create a class ID is: Class ID = UUID5(Vendor ID, Class-Specific-Information)</p>
+<p id="rfc.section.7.7.1.p.4">Class-specific information is composed of a variety of data, for example:</p>
+<p></p>
+
+<ul>
+<li>Model number</li>
+<li>Hardware revision</li>
+<li>Bootloader version (for immutable bootloaders)</li>
+</ul>
+<h2 id="rfc.section.7.8">
+<a href="#rfc.section.7.8">7.8.</a> <a href="#predirective" id="predirective">PreDirective</a>
+</h2>
+<p id="rfc.section.7.8.p.1">PreDirective structures describe operations that a device MUST execute prior to installing an update. For example, shut down monitored equipment, enter safe mode, sync cached files to disk, wait for another device to be updated, or wait until a specific time. Some PreDirectives may appear similar to PreConditions, however there is one difference: a PreCondition is evaluated at one time. A PreDirective can include a &#8220;wait&#8221; instruction, that means that the evaluation of the manifest does not immediately fail if the condition in the PreDirective is not met. Instead, the PreDirective remains active, waiting for its condition to be met.</p>
+<p id="rfc.section.7.8.p.2">For example, suppose two devices, A and B. Device B has an &#8220;other device firmware version&#8221; condition, requiring Device A to be at Rev 2. If both devices are updated from Rev 1 to Rev 2 simultaneously, then Device B may fail the PreCondition check if Device A has not finished its installation. If a PreDirective is used instead, then it can be a &#8220;wait for other device firmware version&#8221; directive. Then, Device B will postpone its update until Device A has finished updating.</p>
+<p id="rfc.section.7.8.p.3">The following CDDL describes the PreDirective structure.</p>
+<p id="rfc.section.7.8.p.4">```CDDL PreDirective = WaitUntilDirective / DayOfWeekDirective / TimeOfDayDirective / BatteryLevelDirective / ExternalPowerDirective / CustomDirective</p>
+<p id="rfc.section.7.8.p.5">WaitUntilDirective     = [ 1, timestamp: uint ] DayOfWeekDirective     = [ 2, day: 0..6 ] TimeOfDayDirective     = [ 3, hours: 0..23, ? minutes: 0..59, ? seconds: 0..59 ] BatteryLevelDirective  = [ 4, level: uint] ExternalPowerDirective = [ 5 ] NetworkDisconnectDirective = [ 6 ] CustomDirective        = [ nint, ? parameters: bstr ] ```</p>
+<p id="rfc.section.7.8.p.6">WaitUntilDirective instructs the target device to wait until a specific time to install the update. The timestamp is encoded as a POSIX timestamp, that is seconds after 1970-01-01 00:00:00. Timestamp conditions MUST be evaluated in 64 bits, regardless of encoded CBOR size.</p>
+<p id="rfc.section.7.8.p.7">DayOfWeekDirective instructs the target device to wait until a specific day of the week to install the update. The day is encoded as days since Sunday, with Sunday being day 0 and Saturday being day 6.</p>
+<p id="rfc.section.7.8.p.8">TimeOfDayDirective instructs the target device to wait until a specific time each day to install the update. When combined with DayOfWeekDirective, this can specify a particular time on a particular day of the week to install an update. Leap seconds are not allowed in the TimeOfDayDirective.</p>
+<p id="rfc.section.7.8.p.9">BatteryLevelDirective defines a directive to wait until the battery is above the specified value. This is for use in rechargeable battery and energy harvesting devices because it instructs the device to wait for a minimum charge. BatteryLevelCondition should be used in discharge-only devices. BatteryLevelDirective is specified in mWh. Battery Levels MUST be evaluated in 16 bits or more. 32 bit evaluation MUST be used for high battery capacity devices (over 65535 mWh capacity)</p>
+<p id="rfc.section.7.8.p.10">ExternalPowerDirective defines a directive to the device to wait until it is connected to an external power source before installing the update.</p>
+<p id="rfc.section.7.8.p.11">NetworkDisconnectDirective defines a directive to the device to disconnect from the network before installing the update.</p>
+<p id="rfc.section.7.8.p.12">Positive Directive numbers are reserved for IANA registration. Negative numbers are reserved for proprietary, application-specific directives.</p>
+<h2 id="rfc.section.7.9">
+<a href="#rfc.section.7.9">7.9.</a> <a href="#installationinfo" id="installationinfo">InstallationInfo</a>
+</h2>
+<p id="rfc.section.7.9.p.1">InstallationInfo contains the information that a device needs in order to install a payload. As described in [Payloads], some payloads require specialised installers. Where a specialised installer is needed, the InstallationInfo block must represent this requirement.</p>
+<p id="rfc.section.7.9.p.2">InstallationInfo is described by the following CDDL.</p>
+<p><samp>CDDL InstallationInfo = { payloadInstallationInfo : [ * PayloadInstallationInfo ], } payloadInstallationInfo = 1 </samp></p>
+<p id="rfc.section.7.9.p.4">installationInfo contains a list of 0 or more PayloadInstallationInfo blocks. PayloadInstallationInfo is described by the following CDDL</p>
+<p id="rfc.section.7.9.p.5">```CDDL PayloadInstallationInfo = { installComponent :          ComponentIdentifier payloadProcessors :         [ * Processor ], ? allowOverride :    bool, ? payloadInstaller:  { payloadInstallerID:           [ * int ], ? payloadInstallerParameters: bstr, } } installComponent = 1 payloadProcessors = 2 allowOverride = 3 payloadInstaller = 4 payloadInstallerID = 5 payloadInstallerParameters = 6</p>
+<p id="rfc.section.7.9.p.6">```</p>
+<p id="rfc.section.7.9.p.7">installComponent defines the component identifier of the component to update. This includes both the storage subsystem designator and the path within the storage subsystem as the final element of the component identifier. This element is MANDATORY.</p>
+<p id="rfc.section.7.9.p.8">payloadProcessors defines where to obtain a resource and how to transform it into a payload. This element is MANDATORY. Processors MUST be instantiated in a parent-last order.</p>
+<p id="rfc.section.7.9.p.9">The payloadInstaller contains a map of elements that are only needed when a specialised payload installer is used. This element is OPTIONAL TO IMPLEMENT.</p>
+<p id="rfc.section.7.9.p.10">payloadInstallerID contains an integer that defines which payload installer will be used. Positive integers are reserved for IANA registration. Negative integers are reserved for application-specific payload installers. Default payload installers are listed below. This element is MANDATORY when payloadInstaller is defined.</p>
+<table cellpadding="3" cellspacing="0" class="tt full center">
+<thead><tr>
+<th class="left">payloadInstallerID</th>
+<th class="left">Definition</th>
+</tr></thead>
+<tbody>
+<tr>
+<td class="left">[ 0 ]</td>
+<td class="left">Binary</td>
+</tr>
+<tr>
+<td class="left">[ 5, 2 ]</td>
+<td class="left">Intel Hex</td>
+</tr>
+<tr>
+<td class="left">[ 5, 3 ]</td>
+<td class="left">Motorola S-Record</td>
+</tr>
+<tr>
+<td class="left">[ 6, 1 ]</td>
+<td class="left">ELF</td>
+</tr>
+<tr>
+<td class="left">[ 7, 1 ]</td>
+<td class="left">CBOR-encoded data</td>
+</tr>
+</tbody>
+</table>
+<p id="rfc.section.7.9.p.11">Note that specialised installer 0 (binary) is typically not necessary and SHOULD ONLY be used when one of the other members of the payloadInstaller structure is required for a particular application.</p>
+<p id="rfc.section.7.9.p.12">These IDs are chosen to match those chosen for ProcessorIDs.</p>
+<p id="rfc.section.7.9.p.13">payloadInstallerParameters contains a bstr that provides any additional arguments needed by the specialised installer. This element is OPTIONAL.</p>
+<h2 id="rfc.section.7.10">
+<a href="#rfc.section.7.10">7.10.</a> <a href="#processor" id="processor">Processor</a>
+</h2>
+<p id="rfc.section.7.10.p.1">Processors define one operation performed in order to modify a Resource in one step towards reconstructing the payload.</p>
+<p id="rfc.section.7.10.p.2">All Processors are OPTIONAL to implement.</p>
+<p><samp>CDDL Processor       = { processorId:       ProcessorID parameters:        Digest / COSE_Encrypt / COSE_Encrypt0 / int / tstr / bstr / nil, inputs:            UriList / ComponentIdentifier / ProcessorDependencies } ProcessorID = [ * int ] ProcessorDependencies = {int =&gt; int} </samp></p>
+<p id="rfc.section.7.10.p.4">The form of parameters and inputs depends on the processorId.</p>
+<p id="rfc.section.7.10.p.5">ProcessorDependencies is an interger-indexed map of integers. Each processor defines its inputs as integers&#8211;these are the indicies of the map. The inputs to the processor are other processors, identified by index in the Processors list. Processors that use the ProcessorDependencies input form MUST have an index in the Processors list greater than any index listed in ProcessorDependencies. The last processor listed in Processors is the processor that generates the payload to be installed in the ComponentIdentifier in PayloadInstallationInfo.</p>
+<p id="rfc.section.7.10.p.6">processorID contains a list of ints. This is conceptually similar to an OID, however, unlike an OID, this list is context-sensitive, encoded as a CBOR list, and supports negative numbers. The reasons for these distinctions are as follows. Contextual IDs are smaller because their use is correlated with their context. CBOR is already in use, so it reduces the number of CODECs required. Negative numbers allow for non-standard extension of IDs.</p>
+<p id="rfc.section.7.10.p.7">Devices are expected to compare processorIDs, bytewise, as binary blobs.</p>
+<p id="rfc.section.7.10.p.8">The first integer represents a broad classification of the processor, as defined in the following table.</p>
+<table cellpadding="3" cellspacing="0" class="tt full center">
+<thead><tr>
+<th class="left">ID[0]</th>
+<th class="left">Type</th>
+<th class="left">Description</th>
+</tr></thead>
+<tbody>
+<tr>
+<td class="left">0</td>
+<td class="left">Reserved</td>
+<td class="left">Do not use.</td>
+</tr>
+<tr>
+<td class="left">1</td>
+<td class="left">Resource</td>
+<td class="left">Indicates that the processor sources data by reading a resource.</td>
+</tr>
+<tr>
+<td class="left">2</td>
+<td class="left">Cipher</td>
+<td class="left">Encrypts or Decrypts data.</td>
+</tr>
+<tr>
+<td class="left">3</td>
+<td class="left">Compress</td>
+<td class="left">Compresses or Decompresses data.</td>
+</tr>
+<tr>
+<td class="left">4</td>
+<td class="left">Relocate</td>
+<td class="left">Reserved for Relocation.</td>
+</tr>
+<tr>
+<td class="left">5</td>
+<td class="left">BinText</td>
+<td class="left">Packs or Unpacks Binary-to-text encoding formats.</td>
+</tr>
+<tr>
+<td class="left">6</td>
+<td class="left">Object</td>
+<td class="left">Reserved for object formats, such as elf.</td>
+</tr>
+</tbody>
+</table>
+<p id="rfc.section.7.10.p.9">Each of these classifications has a subset</p>
+<h3 id="rfc.section.7.10.1">
+<a href="#rfc.section.7.10.1">7.10.1.</a> <a href="#resource" id="resource">Resource</a>
+</h3>
+<p id="rfc.section.7.10.1.p.1">A resource can be either local or remote. Local resources fetch ComponentIdentifiers. Remote Resources fetch from URIs.</p>
+<table cellpadding="3" cellspacing="0" class="tt full center">
+<thead><tr>
+<th class="left">ID</th>
+<th class="left">Type</th>
+<th class="left">Parameters</th>
+<th class="left">Inputs</th>
+<th class="left">Description</th>
+</tr></thead>
+<tbody>
+<tr>
+<td class="left">[ 1, 1 ]</td>
+<td class="left">Remote</td>
+<td class="left">Digest</td>
+<td class="left">UriList</td>
+<td class="left">Fetch a resource from a remote location</td>
+</tr>
+<tr>
+<td class="left">[ 1, 2 ]</td>
+<td class="left">Local</td>
+<td class="left">Digest</td>
+<td class="left">ComponentIdentifier</td>
+<td class="left">Fetch a resource from a local location</td>
+</tr>
+</tbody>
+</table>
+<h3 id="rfc.section.7.10.2">
+<a href="#rfc.section.7.10.2">7.10.2.</a> <a href="#cipher" id="cipher">Cipher</a>
+</h3>
+<p id="rfc.section.7.10.2.p.1">A Cipher, such as one of the many AES modes. These are typically implemented using a cryptographic container such as a COSE_Encrypt structure. Ciphers are typically used in decrypt mode, so this is the default behaviour. If encrypt mode is needed, then this can be achieved by extending the ID as shown in the table below.</p>
+<p id="rfc.section.7.10.2.p.2">Only one input is used, specified using ProcessorDependencies[0], a positive integer index of the data to be processed in the tree.</p>
+<p id="rfc.section.7.10.2.p.3">Only two Cipher modes are defined, the COSE_Encrypt and COSE_Encrypt0 Cipher mode2.</p>
+<table cellpadding="3" cellspacing="0" class="tt full center">
+<thead><tr>
+<th class="left">ID</th>
+<th class="left">Type</th>
+<th class="left">Parameters</th>
+<th class="left">Inputs</th>
+<th class="left">Description</th>
+</tr></thead>
+<tbody>
+<tr>
+<td class="left">[ 2, 1 ]</td>
+<td class="left">COSE_Encrypt</td>
+<td class="left">COSE_Encrypt</td>
+<td class="left">{0 : dataIdx}</td>
+<td class="left">Decrypt data enveloped by a COSE_Encrypt structure</td>
+</tr>
+<tr>
+<td class="left">[ 2, 1, 2 ]</td>
+<td class="left">COSE_Encrypt</td>
+<td class="left">COSE_Encrypt</td>
+<td class="left">{0 : dataIdx}</td>
+<td class="left">Encrypt data enveloped by a COSE_Encrypt structure</td>
+</tr>
+<tr>
+<td class="left">[ 2, 2 ]</td>
+<td class="left">COSE_Encrypt0</td>
+<td class="left">COSE_Encrypt0</td>
+<td class="left">{0 : dataIdx}</td>
+<td class="left">Decrypt data enveloped by a COSE_Encrypt0 structure</td>
+</tr>
+<tr>
+<td class="left">[ 2, 2, 2 ]</td>
+<td class="left">COSE_Encrypt0</td>
+<td class="left">COSE_Encrypt0</td>
+<td class="left">{0 : dataIdx}</td>
+<td class="left">Encrypt data enveloped by a COSE_Encrypt0 structure</td>
+</tr>
+</tbody>
+</table>
+<p id="rfc.section.7.10.2.p.4">Mode 1 (decrypt) is implied when mode 2 (encrypt) is not specified.</p>
+<h3 id="rfc.section.7.10.3">
+<a href="#rfc.section.7.10.3">7.10.3.</a> <a href="#compress" id="compress">Compress</a>
+</h3>
+<p id="rfc.section.7.10.3.p.1">A compression/decompression algorithm. Typically, this means that the input should contain a valid compression container.</p>
+<p id="rfc.section.7.10.3.p.2">Compression algorithms are typically used in decompress mode, so this is the default behaviour.</p>
+<p id="rfc.section.7.10.3.p.3">Only one input is used, specified using ProcessorDependencies[0], a positive integer index of the data to be processed in the tree.</p>
+<table cellpadding="3" cellspacing="0" class="tt full center">
+<thead><tr>
+<th class="left">ID</th>
+<th class="left">Type</th>
+<th class="left">Parameters</th>
+<th class="left">Inputs</th>
+<th class="left">Description</th>
+</tr></thead>
+<tbody>
+<tr>
+<td class="left">[ 3, 1 ]</td>
+<td class="left">gzip</td>
+<td class="left">nil</td>
+<td class="left">{0 : dataIdx}</td>
+<td class="left">Decompress using gzip</td>
+</tr>
+<tr>
+<td class="left">[ 3, 1, 2 ]</td>
+<td class="left">gzip</td>
+<td class="left">nil</td>
+<td class="left">{0 : dataIdx}</td>
+<td class="left">Compress using gzip</td>
+</tr>
+<tr>
+<td class="left">[ 3, 2 ]</td>
+<td class="left">bzip2</td>
+<td class="left">nil</td>
+<td class="left">{0 : dataIdx}</td>
+<td class="left">Decompress using bzip2</td>
+</tr>
+<tr>
+<td class="left">[ 3, 2, 2 ]</td>
+<td class="left">bzip2</td>
+<td class="left">nil</td>
+<td class="left">{0 : dataIdx}</td>
+<td class="left">Compress using bzip2</td>
+</tr>
+<tr>
+<td class="left">[ 3, 4 ]</td>
+<td class="left">lz4</td>
+<td class="left">nil</td>
+<td class="left">{0 : dataIdx}</td>
+<td class="left">Decompress using lz4</td>
+</tr>
+<tr>
+<td class="left">[ 3, 4, 2 ]</td>
+<td class="left">lz4</td>
+<td class="left">nil</td>
+<td class="left">{0 : dataIdx}</td>
+<td class="left">Compress using lz4</td>
+</tr>
+<tr>
+<td class="left">[ 3, 7 ]</td>
+<td class="left">lzma</td>
+<td class="left">nil</td>
+<td class="left">{0 : dataIdx}</td>
+<td class="left">Decompress using lzma</td>
+</tr>
+<tr>
+<td class="left">[ 3, 7, 2 ]</td>
+<td class="left">lzma</td>
+<td class="left">nil</td>
+<td class="left">{0 : dataIdx}</td>
+<td class="left">Compress using lzma</td>
+</tr>
+</tbody>
+</table>
+<p id="rfc.section.7.10.3.p.4">Mode 1 (decompress) is implied when mode 2 (compress) is not specified.</p>
+<h3 id="rfc.section.7.10.4">
+<a href="#rfc.section.7.10.4">7.10.4.</a> <a href="#relocate" id="relocate">Relocate</a>
+</h3>
+<p id="rfc.section.7.10.4.p.1">Relocation is reserved for future use.</p>
+<h3 id="rfc.section.7.10.5">
+<a href="#rfc.section.7.10.5">7.10.5.</a> <a href="#bintext" id="bintext">BinText</a>
+</h3>
+<p id="rfc.section.7.10.5.p.1">Packs or unpacks a binary-to-text format.</p>
+<p id="rfc.section.7.10.5.p.2">WARNING: Some binary-to-text formats can cause significant difficulty for a resource-constrained device. They also dramatically increase bandwidth over equivalent binary formats, with the worst being hex encoding at a 2:1 inflation. The best is base64 at a 4:3 inflation.</p>
+<p id="rfc.section.7.10.5.p.3">binary-to-text formats are typically used in decode mode, so this is the default behaviour.</p>
+<p id="rfc.section.7.10.5.p.4">Only one input is used, specified using ProcessorDependencies[0], a positive integer index of the data to be processed in the tree.</p>
+<table cellpadding="3" cellspacing="0" class="tt full center">
+<thead><tr>
+<th class="left">ID</th>
+<th class="left">Type</th>
+<th class="left">Parameters</th>
+<th class="left">Inputs</th>
+<th class="left">Description</th>
+</tr></thead>
+<tbody>
+<tr>
+<td class="left">[ 5, 1 ]</td>
+<td class="left">base64</td>
+<td class="left">uint / tstr</td>
+<td class="left">{ 0 : dataIdx }</td>
+<td class="left">Decode base64 data in one of several encodings</td>
+</tr>
+<tr>
+<td class="left">[ 5, 1, 2 ]</td>
+<td class="left">base64</td>
+<td class="left">uint / tstr</td>
+<td class="left">{ 0 : dataIdx }</td>
+<td class="left">Decode base64 data in one of several encodings</td>
+</tr>
+<tr>
+<td class="left">[ 5, 2 ]</td>
+<td class="left">hex</td>
+<td class="left">nil</td>
+<td class="left">{ 0 : dataIdx }</td>
+<td class="left">Decode Intel Hex data</td>
+</tr>
+<tr>
+<td class="left">[ 5, 2, 2 ]</td>
+<td class="left">hex</td>
+<td class="left">nil</td>
+<td class="left">{ 0 : dataIdx }</td>
+<td class="left">Encode Intel Hex data</td>
+</tr>
+<tr>
+<td class="left">[ 5, 3 ]</td>
+<td class="left">srecord</td>
+<td class="left">nil</td>
+<td class="left">{ 0 : dataIdx }</td>
+<td class="left">Decode S-Record data</td>
+</tr>
+<tr>
+<td class="left">[ 5, 3, 2 ]</td>
+<td class="left">srecord</td>
+<td class="left">nil</td>
+<td class="left">{ 0 : dataIdx }</td>
+<td class="left">Encode S-Record data</td>
+</tr>
+</tbody>
+</table>
+<p id="rfc.section.7.10.5.p.5">Mode 1 (decode) is implied when mode 2 (encode) is not specified.</p>
+<p id="rfc.section.7.10.5.p.6">When base64 is specified, several choices of parameter are available:</p>
+<table cellpadding="3" cellspacing="0" class="tt full center">
+<thead><tr>
+<th class="left">Type</th>
+<th class="left">Value</th>
+<th class="left">Description</th>
+</tr></thead>
+<tbody>
+<tr>
+<td class="left">uint</td>
+<td class="left">1</td>
+<td class="left">RFC 4648 standard base64</td>
+</tr>
+<tr>
+<td class="left">uint</td>
+<td class="left">2</td>
+<td class="left">base64url</td>
+</tr>
+<tr>
+<td class="left">tstr</td>
+<td class="left">base64 characterset</td>
+<td class="left">Arbitrary base64, as specified by the character set.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="rfc.section.7.10.6">
+<a href="#rfc.section.7.10.6">7.10.6.</a> <a href="#object" id="object">Object</a>
+</h3>
+<p id="rfc.section.7.10.6.p.1">Object packing and unpacking is reserved for future use.</p>
+<h2 id="rfc.section.7.11">
+<a href="#rfc.section.7.11">7.11.</a> <a href="#postinstallationinfo" id="postinstallationinfo">PostInstallationInfo</a>
+</h2>
+<p id="rfc.section.7.11.p.1">PostInstallationInfo contains information that the recipient needs in order to determine whether an installation has completed successfully and whether anything needs to be done after completion. These checks and instructions are only needed once, so PostInstallationInfo is severable.</p>
+<p id="rfc.section.7.11.p.2">The following CDDL describes the PostInstallationInfo structure.</p>
+<p id="rfc.section.7.11.p.3">```CDDL PostInstallationInfo = { ? postConditions : [ * PostCondition ], ? postDirectives : [ * PostDirective ] } postConditions = 1 postDirectives = 2</p>
+<p id="rfc.section.7.11.p.4">PostCondition   = ImageCondition / CustomCondition PostDirective   = CustomDirective ```</p>
+<p id="rfc.section.7.11.p.5">postConditions contains a list of 0 or more PostCondition structures. postConditions is OPTIONAL and OPTIONAL to implement.</p>
+<p id="rfc.section.7.11.p.6">postDirectives contains a list of 0 or more PostDirective structures. postDirectives is OPTIONAL and OPTIONAL to implement.</p>
+<p id="rfc.section.7.11.p.7">PostConditions are used to specify conditions that must be true after an update has completed. The ImageCondition specifies a digest of an image that must match after application of an update.</p>
+<p id="rfc.section.7.11.p.8">PostDirectives can be used to specify an action taken by the recipient after application of an update is complete, such as:</p>
+<p></p>
+
+<ul>
+<li>Reboot after application</li>
+<li>Restart designated component when installation is complete</li>
+</ul>
+<h1 id="rfc.section.8">
+<a href="#rfc.section.8">8.</a> <a href="#complete-cddl" id="complete-cddl">Complete CDDL</a>
+</h1>
+<p id="rfc.section.8.p.1">A small portion of RFC 8152 <a href="#RFC8152" class="xref">[RFC8152]</a> is reproduced in this CDDL so that COSE_Digest can be fully defined.</p>
+<p id="rfc.section.8.p.2">```CDDL OuterWrapper = { authenticationWrapper: AuthenticationWrapper, manifest:              bstr .cbor Manifest, ? preInstallExt:       bstr .cbor PreInstallationInfo, ? installExt:          bstr .cbor InstallationInfo, ? postInstallExt:      bstr .cbor PostInstallationInfo, ? textInfoExt:         bstr .cbor Text, ? coswidExt:           bstr .cbor concise-software-identity } authenticationWrapper = 1 manifest = 2 preInstallExt = 3 installExt = 4 postInstallExt = 5 textExt = 6 coswidExt = 7</p>
+<p id="rfc.section.8.p.3">AuthenticationWrapper = COSE_Mac_Tagged / COSE_Sign_Tagged / COSE_Mac0_Tagged / COSE_Sign1_Tagged</p>
+<p id="rfc.section.8.p.4">concise-software-identity = any AuthenticationWrapper = COSE_Mac_Tagged / COSE_Sign_Tagged / COSE_Mac0_Tagged / COSE_Sign1_Tagged</p>
+<p id="rfc.section.8.p.5">COSE_Mac_Tagged = any COSE_Sign_Tagged = any COSE_Mac0_Tagged = any COSE_Sign1_Tagged = any COSE_Encrypt = any COSE_Encrypt0 = any</p>
+<p id="rfc.section.8.p.6">COSE_Mac0 = [ Headers, payload : bstr / nil, tag : bstr, ]</p>
+<p id="rfc.section.8.p.7">Headers = ( protected : empty_or_serialized_map, unprotected : header_map )</p>
+<p id="rfc.section.8.p.8">header_map = { Generic_Headers, * label =&gt; values }</p>
+<p id="rfc.section.8.p.9">empty_or_serialized_map = bstr .cbor header_map / bstr .size 0</p>
+<p id="rfc.section.8.p.10">Generic_Headers = ( ? 1 =&gt; int / tstr,  ; algorithm identifier ? 2 =&gt; [+label],    ; criticality ? 3 =&gt; tstr / int,  ; content type ? 4 =&gt; bstr,        ; key identifier ? 5 =&gt; bstr,        ; IV ? 6 =&gt; bstr,        ; Partial IV ? 7 =&gt; COSE_Signature / [+COSE_Signature] ; Counter signature ) COSE_Digest = COSE_Mac0</p>
+<p id="rfc.section.8.p.11">Manifest = { manifestVersion : 1, sequence        : SequenceNumber, ? preInstall    : PreInstallationInfo / COSE_Digest, ? dependencies  : [* DependencyInfo], ? payloads      : [* PayloadInfo], ? install       : InstallationInfo / COSE_Digest, ? postInstall   : PostInstallationInfo / COSE_Digest, ? text          : TextInfo / COSE_Digest, ? coswid        : concise-software-identity / COSE_Digest }</p>
+<p id="rfc.section.8.p.12">manifestVersion = 1 sequence        = 2 preInstall      = 3 dependencies    = 4 payloads        = 5 install         = 6 postInstall     = 7 text            = 8 coswid          = 9</p>
+<p id="rfc.section.8.p.13">SequenceNumber = uint</p>
+<p id="rfc.section.8.p.14">DependencyInfo = { depDigest  : COSE_Digest,         ; digest of the resource depScope   : ComponentIdentifier, ; where the dependency&#8217;s payloads will be ; applied ? depUris  : UriList              ; where to find the resource ; applied } depDigest = 1 depScope  = 2 depUris   = 3</p>
+<p id="rfc.section.8.p.15">UriList = [ + [priority: int, uri: tstr] ] ComponentIdentifier = [* bstr]</p>
+<p id="rfc.section.8.p.16">PayloadInfo = { payloadComponent:       ComponentIdentifier, payloadSize:            uint / nil, payloadDigest:          COSE_Digest, ? regenInfo : { regenDigest:        COSE_Digest regenType:          int ? regenParameters:  bstr }, } payloadComponent = 1 payloadSize      = 2 payloadDigest    = 3 regenInfo        = 4 regenDigest      = 5 regenType        = 6 regenParameters  = 7</p>
+<p id="rfc.section.8.p.17">RegenType = LocationLengthRegenType / FileListRegenType / KeyListRegenType / CustomRegenType</p>
+<p id="rfc.section.8.p.18">LocationLengthRegenType = 1 FileListRegenType       = 2 KeyListRegenType        = 3 CustomRegenType         = nint</p>
+<p id="rfc.section.8.p.19">RegenParameters = LocationLengthRegenParameters / FileListRegenParameters / KeyListRegenParameters / CustomRegenParameters LocationLengthRegenParameters = [ * [ location: uint, length: uint ] ] FileListRegenParameters       = [ * file: tstr ] KeyListRegenParameters        = [ * key: tstr ] CustomRegenParameters         = bstr</p>
+<p id="rfc.section.8.p.20">PreInstallationInfo = { ? preConditions : [ * PreCondition ], ? preDirectives : [ * PreDirective ] } preConditions = 1 preDirectives = 2</p>
+<p id="rfc.section.8.p.21">PreCondition    = IdCondition / TimeCondition / ImageCondition / BatteryLevelCondition / CustomCondition</p>
+<p id="rfc.section.8.p.22">IdCondition     = [ vendor : 1, id: Uuid ] / [ class  : 2, id: Uuid ] / [ device : 3, id: Uuid ] Uuid = bstr .size 16</p>
+<p id="rfc.section.8.p.23">TimeCondition   = [useBy: 4, time:       Timestamp] ImageCondition  = [ currentContent : 6 ,<br> digest: COSE_Digest / nil, location: ComponentIdentifier ] / [ notCurrentContent : 7 ,<br> digest: COSE_Digest / nil, location: ComponentIdentifier ] BatteryLevelCondition = [ batteryLevel: 8, level: uint ] CustomCondition = [nint, parameters: bstr]</p>
+<p id="rfc.section.8.p.24">Timestamp       = uint</p>
+<p id="rfc.section.8.p.25">PreDirective = WaitUntilDirective / DayOfWeekDirective / TimeOfDayDirective / BatteryLevelDirective / ExternalPowerDirective / CustomDirective</p>
+<p id="rfc.section.8.p.26">WaitUntilDirective     = [ 1, timestamp: uint ] DayOfWeekDirective     = [ 2, day: 0..6 ] TimeOfDayDirective     = [ 3, hours: 0..23, ? minutes: 0..59, ? seconds: 0..59 ] BatteryLevelDirective  = [ 4, level: uint] ExternalPowerDirective = [ 5 ] NetworkDisconnectDirective = [ 6 ] CustomDirective        = [ nint, ? parameters: bstr ]</p>
+<p id="rfc.section.8.p.27">InstallationInfo = { payloadInstallationInfo : [ * PayloadInstallationInfo ], } payloadInstallationInfo = 1</p>
+<p id="rfc.section.8.p.28">PayloadInstallationInfo = { installComponent :          ComponentIdentifier payloadProcessors :         [ * Processor ], ? allowOverride :    bool, ? payloadInstaller:  { payloadInstallerID:           [ * int ], ? payloadInstallerParameters: bstr, } } installComponent = 1 payloadProcessors = 2 allowOverride = 3 payloadInstaller = 4 payloadInstallerID = 5 payloadInstallerParameters = 6</p>
+<p id="rfc.section.8.p.29">Processor       = { processorId:       ProcessorID parameters:        COSE_Digest / COSE_Encrypt / COSE_Encrypt0 / int / tstr / bstr / nil, inputs:            UriList / ComponentIdentifier / {int =&gt; int} } ProcessorID = [ * int ]</p>
+<p id="rfc.section.8.p.30">PostInstallationInfo = { ? postConditions : [ * PostCondition ], ? postDirectives : [ * PostDirective ] } postConditions = 1 postDirectives = 2</p>
+<p id="rfc.section.8.p.31">PostCondition   = ImageCondition / CustomCondition PostDirective   = CustomDirective</p>
+<p id="rfc.section.8.p.32">Text = { * int =&gt; tstr } ```</p>
+<p id="rfc.section.8.p.33">NOTE: COSE structures are specified as &#8220;any&#8221; to enable CDDL tooling to process this CDDL without including all of the COSE specification. The same consideration applies to concise-software-identifier.</p>
+<h1 id="rfc.section.9">
+<a href="#rfc.section.9">9.</a> <a href="#examples" id="examples">Examples</a>
+</h1>
+<p id="rfc.section.9.p.1">## Unsigned manifest with one payload</p>
+<p><samp>OuterWrapper = { / authenticationWrapper / 1 : F6 / null /, / manifest / 2: h'a3010102020581a301814130021825038444a1011829a0f658208caf9283b13666ca4e50f7a1eee86ba40b5e6a1d2ca39f7498b6a6a7be8d8d67' / { \ manifestVersion \  1 : 1, \ sequence \ 2: 1, \ payloads \ 5: [ { \ payloadComponent \ 1: [h'30'], \ payloadSize \ 2: 37, \ payloadDigest \ 3: [ \ protected \ "a1011829" \ { \ alg \ 1 : 41 \ sha-256 \ } \ , \ unprotected \ {}, \ payload \ F6 \ null, \ tag \ h'8caf9283b13666ca4e50f7a1eee86ba40b5e6a1d2ca39f7498b6a6a7be8d8d67' ] } ] } / } </samp></p>
+<p id="rfc.section.9.p.3">Raw OuterWrapper: 62 bytes a102583aa3010102020581a301814130021825038444a1011829a0f658208caf9283b13666ca4e50f7a1eee86ba40b5e6a1d2ca39f7498b6a6a7be8d8d67</p>
+<h2 id="rfc.section.9.1">
+<a href="#rfc.section.9.1">9.1.</a> <a href="#ecdsa-secp256r1-signed-manifest-with-one-payload" id="ecdsa-secp256r1-signed-manifest-with-one-payload">ECDSA secp256r1-signed manifest with one payload</a>
+</h2>
+<p id="rfc.section.9.1.p.1">A manifest with payload description only, authenticated by an ECDSA signature. Signing key identified by Subject Key Identifier.</p>
+<p><samp>OuterWrapper = { / authenticationWrapper / 1: #98([ / protected / h'A103182A' / { \ content type \ 3 : 42 \ application octet-stream \ } / , / unprotected / {}, / payload / null, / signatures / [ [ / protected / h'A10126' / { \ alg \ 1 : -7 \ ECDSA 256 \ }, / unprotected / { / kid / 4 : h'537ac93ac909e79990914caa00fe87eeea637ef89b5512e5cb6e558a136ff98d' } / , / signature / h'304502201d65938ec454354a6e866b468e9808db4ef36e97de09f98fda92e9c0e3302fc8022100aff871fe581d3f6b831d74e46f9acd7a015e5548770b2a437970be9272a7fbaa' ] ] ]) / manifest / 2: h'a3010102020581a301814130021825038444a1011829a0f658208caf9283b13666ca4e50f7a1eee86ba40b5e6a1d2ca39f7498b6a6a7be8d8d67' / { \ manifestVersion \  1 : 1, \ sequence \ 2: 1, \ payloads \ 5: [ { \ payloadComponent \ 1: [h'30'], \ payloadSize \ 2: 37, \ payloadDigest \ 3: [ \ protected \ "a1011829" \ { \ alg \ 1 : 41 \ sha-256 \ } \ , \ unprotected \ {}, \ payload \ F6 \ null, \ tag \ h'8caf9283b13666ca4e50f7a1eee86ba40b5e6a1d2ca39f7498b6a6a7be8d8d67' ] } ] } / } </samp></p>
+<p id="rfc.section.9.1.p.3">Raw OuterWrapper: 188 bytes a201d8628444a103182aa0f6818343a10126a1045820537ac93ac909e79990914caa00fe87eeea637ef89b5512e5cb6e558a136ff98d5847304502201d65938ec454354a6e866b468e9808db4ef36e97de09f98fda92e9c0e3302fc8022100aff871fe581d3f6b831d74e46f9acd7a015e5548770b2a437970be9272a7fbaa02583aa3010102020581a301814130021825038444a1011829a0f658208caf9283b13666ca4e50f7a1eee86ba40b5e6a1d2ca39f7498b6a6a7be8d8d67</p>
+<h2 id="rfc.section.9.2">
+<a href="#rfc.section.9.2">9.2.</a> <a href="#a-ecdsa-signed-raw-binary-payload-with-conditions-text-and-installationinfo" id="a-ecdsa-signed-raw-binary-payload-with-conditions-text-and-installationinfo">A ECDSA-signed raw binary payload with conditions, text, and installationInfo</a>
+</h2>
+<p><samp>OuterWrapper = { / authenticationWrapper / 1: #98([ / protected / h'A103182A' / { \ content type \ 3 : 42 \ application octet-stream \ } / , / unprotected / {}, / payload / null, / signatures / [ [ / protected / h'A10126' / { \ alg \ 1 : -7 \ ECDSA 256 \ }, / unprotected / { / kid / 4 : h'537ac93ac909e79990914caa00fe87eeea637ef89b5512e5cb6e558a136ff98d' } / , / signature /"3045022100830cf142cc4adf563392dc7e0430000158bf3720b28b7cea388b0f1a5f8918a802201def2df34d6abd3b17c3425573ff2b7cacae3dd085e11dfc23bf0c60be51b7da" ] ] ]) / manifest / 2: h'a60101020203a10182820150fa6b4a53d5ad5fdfbe9de663e4d41ffe8202506e04d3c2488759e4a597b5e7cd4976530581a301814130021825038444a1011829a0f658208caf9283b13666ca4e50f7a1eee86ba40b5e6a1d2ca39f7498b6a6a7be8d8d6706a10181a2018141300281a20182010103820076687474703a2f2f666f6f2e6261722f62617a2e62696e088444a1011829a0f658204e2714598479d8b6634805df5019ef3420edff0329894acc91de8c8de16fb0cf' / { \ manifestVersion \  1 : 1, \ sequence \ 2 : 2, \ preInstall \ 3 : { \ preConditions 1 : [ [ \ vendorId \ 1, h'fa6b4a53d5ad5fdfbe9de663e4d41ffe'], [ \ classId \ 2, h'6e04d3c2488759e4a597b5e7cd497653'] ] }, \ payloads \ 5: [ { \ payloadComponent \ 1: [h'30'], \ payloadSize \ 2: 37, \ payloadDigest \ 3: [ \ protected \ "a1011829" \ { \ alg \ 1 : 41 \ sha-256 \ } \ , \ unprotected \ {}, \ payload \ F6 \ null, \ tag \ h'8caf9283b13666ca4e50f7a1eee86ba40b5e6a1d2ca39f7498b6a6a7be8d8d67' ] } ], \ install \ 6 : { \ payloadInstallationInfo \ 1 : [ { \ installComponent \ 1 : [h'30'], \ payloadProcessors \ 2 : [ { \ processorId \ 1 : [1,1] \ remote resource \ , \ inputs \ 3 : [ 0, "http://foo.bar/baz.bin" ] } ] } ] }, \ textInfo \ 8 : [ \ protected \ "a1011829" \ { \ alg \ 1 : 41 \ sha-256 \ } \ , \ unprotected \ {}, \ payload \ F6 \ null, \ tag \ "4e2714598479d8b6634805df5019ef3420edff0329894acc91de8c8de16fb0cf" ] } / textInfoExt / 6 : h'a10178c84c6f72656d20697073756d20646f6c6f722073697420616d65742c20636f6e73656374657475722061646970697363696e6720656c69742e204e756e63207365642074696e636964756e7420616e74652c206120736f64616c6573206c6967756c612e2050686173656c6c757320756c6c616d636f72706572206f64696f20636f6d6d6f646f20697073756d20656765737461732c207669746165206c6163696e6961206c656f206f726e6172652e2053757370656e646973736520706f7375657265207365642e' / { \ updateDescription \ 1 : "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc sed tincidunt ante, a sodales ligula. Phasellus ullamcorper odio commodo ipsum egestas, vitae lacinia leo ornare. Suspendisse posuere sed." } / } </samp></p>
+<p id="rfc.section.9.2.p.2">Raw OuterWrapper: 522 bytes a301d8628444a103182aa0f6818343a10126a1045820537ac93ac909e79990914caa00fe87eeea637ef89b5512e5cb6e558a136ff98d58473045022100830cf142cc4adf563392dc7e0430000158bf3720b28b7cea388b0f1a5f8918a802201def2df34d6abd3b17c3425573ff2b7cacae3dd085e11dfc23bf0c60be51b7da0658cca10178c84c6f72656d20697073756d20646f6c6f722073697420616d65742c20636f6e73656374657475722061646970697363696e6720656c69742e204e756e63207365642074696e636964756e7420616e74652c206120736f64616c6573206c6967756c612e2050686173656c6c757320756c6c616d636f72706572206f64696f20636f6d6d6f646f20697073756d20656765737461732c207669746165206c6163696e6961206c656f206f726e6172652e2053757370656e646973736520706f7375657265207365642e0258b9a60101020203a10182820150fa6b4a53d5ad5fdfbe9de663e4d41ffe8202506e04d3c2488759e4a597b5e7cd4976530581a301814130021825038444a1011829a0f658208caf9283b13666ca4e50f7a1eee86ba40b5e6a1d2ca39f7498b6a6a7be8d8d6706a10181a2018141300281a20182010103820076687474703a2f2f666f6f2e6261722f62617a2e62696e088444a1011829a0f658204e2714598479d8b6634805df5019ef3420edff0329894acc91de8c8de16fb0cf</p>
+<p id="rfc.section.9.2.p.3">Text severed (textInfoExt deleted from OuterWrapper): 315 bytes a201d8628444a103182aa0f6818343a10126a1045820537ac93ac909e79990914caa00fe87eeea637ef89b5512e5cb6e558a136ff98d58473045022100830cf142cc4adf563392dc7e0430000158bf3720b28b7cea388b0f1a5f8918a802201def2df34d6abd3b17c3425573ff2b7cacae3dd085e11dfc23bf0c60be51b7da0258b9a60101020203a10182820150fa6b4a53d5ad5fdfbe9de663e4d41ffe8202506e04d3c2488759e4a597b5e7cd4976530581a301814130021825038444a1011829a0f658208caf9283b13666ca4e50f7a1eee86ba40b5e6a1d2ca39f7498b6a6a7be8d8d6706a10181a2018141300281a20182010103820076687474703a2f2f666f6f2e6261722f62617a2e62696e088444a1011829a0f658204e2714598479d8b6634805df5019ef3420edff0329894acc91de8c8de16fb0cf</p>
+<h1 id="rfc.section.10">
+<a href="#rfc.section.10">10.</a> <a href="#iana-considerations" id="iana-considerations">IANA Considerations</a>
+</h1>
+<p id="rfc.section.10.p.1">Several registries will be required for:</p>
+<p></p>
+
+<ul>
+<li>standard Conditions</li>
+<li>standard Directives</li>
+<li>standard Processors</li>
+<li>standard text values</li>
+</ul>
+<p id="rfc.section.10.p.3">Editor&#8217;s Note: A few registries would be good to allow easier allocation of new features.</p>
+<h1 id="rfc.section.11">
+<a href="#rfc.section.11">11.</a> <a href="#security-considerations" id="security-considerations">Security Considerations</a>
+</h1>
+<p id="rfc.section.11.p.1">This document is about a manifest format describing and protecting firmware images and as such it is part of a larger solution for offering a standardized way of delivering firmware updates to IoT devices. A more detailed discussion about security can be found in the architecture document <a href="#Architecture" class="xref">[Architecture]</a>.</p>
+<h1 id="rfc.section.12">
+<a href="#rfc.section.12">12.</a> <a href="#mailing-list-information" id="mailing-list-information">Mailing List Information</a>
+</h1>
+<p id="rfc.section.12.p.1">The discussion list for this document is located at the e-mail address <a href="mailto:suit@ietf.org">suit@ietf.org</a>. Information on the group and information on how to subscribe to the list is at <a href="https://www1.ietf.org/mailman/listinfo/suit">https://www1.ietf.org/mailman/listinfo/suit</a></p>
+<p id="rfc.section.12.p.2">Archives of the list can be found at: <a href="https://www.ietf.org/mail-archive/web/suit/current/index.html">https://www.ietf.org/mail-archive/web/suit/current/index.html</a></p>
+<h1 id="rfc.section.13">
+<a href="#rfc.section.13">13.</a> <a href="#acknowledgements" id="acknowledgements">Acknowledgements</a>
+</h1>
+<p id="rfc.section.13.p.1">We would like to thank the following persons for their support in designing this mechanism:</p>
+<p></p>
+
+<ul>
+<li>Milosch Meriac</li>
+<li>Geraint Luff</li>
+<li>Dan Ros</li>
+<li>John-Paul Stanford</li>
+<li>Carsten Bormann</li>
+<li>Henk Birkholz</li>
+<li>&#216;yvind R&#248;nningstad</li>
+<li>Frank Audun Kvamtr&#248;</li>
+<li>Krzysztof Chru&#347;ci&#324;ski</li>
+<li>Andrzej Puzdrowski</li>
+<li>Michael Richardson</li>
+<li>David Brown</li>
+</ul>
+<h1 id="rfc.references">
+<a href="#rfc.references">14.</a> References</h1>
+<h2 id="rfc.references.1">
+<a href="#rfc.references.1">14.1.</a> Normative References</h2>
+<table><tbody>
+<tr>
+<td class="reference"><b id="RFC2119">[RFC2119]</b></td>
+<td class="top">
+<a>Bradner, S.</a>, "<a href="https://tools.ietf.org/html/rfc2119">Key words for use in RFCs to Indicate Requirement Levels</a>", BCP 14, RFC 2119, DOI 10.17487/RFC2119, March 1997.</td>
+</tr>
+<tr>
+<td class="reference"><b id="RFC4122">[RFC4122]</b></td>
+<td class="top">
+<a>Leach, P.</a>, <a>Mealling, M.</a> and <a>R. Salz</a>, "<a href="https://tools.ietf.org/html/rfc4122">A Universally Unique IDentifier (UUID) URN Namespace</a>", RFC 4122, DOI 10.17487/RFC4122, July 2005.</td>
+</tr>
+<tr>
+<td class="reference"><b id="RFC4648">[RFC4648]</b></td>
+<td class="top">
+<a>Josefsson, S.</a>, "<a href="https://tools.ietf.org/html/rfc4648">The Base16, Base32, and Base64 Data Encodings</a>", RFC 4648, DOI 10.17487/RFC4648, October 2006.</td>
+</tr>
+<tr>
+<td class="reference"><b id="RFC7049">[RFC7049]</b></td>
+<td class="top">
+<a>Bormann, C.</a> and <a>P. Hoffman</a>, "<a href="https://tools.ietf.org/html/rfc7049">Concise Binary Object Representation (CBOR)</a>", RFC 7049, DOI 10.17487/RFC7049, October 2013.</td>
+</tr>
+<tr>
+<td class="reference"><b id="RFC8152">[RFC8152]</b></td>
+<td class="top">
+<a>Schaad, J.</a>, "<a href="https://tools.ietf.org/html/rfc8152">CBOR Object Signing and Encryption (COSE)</a>", RFC 8152, DOI 10.17487/RFC8152, July 2017.</td>
+</tr>
+<tr>
+<td class="reference"><b id="RFC8392">[RFC8392]</b></td>
+<td class="top">
+<a>Jones, M.</a>, <a>Wahlstroem, E.</a>, <a>Erdtman, S.</a> and <a>H. Tschofenig</a>, "<a href="https://tools.ietf.org/html/rfc8392">CBOR Web Token (CWT)</a>", RFC 8392, DOI 10.17487/RFC8392, May 2018.</td>
+</tr>
+</tbody></table>
+<h2 id="rfc.references.2">
+<a href="#rfc.references.2">14.2.</a> Informative References</h2>
+<table><tbody>
+<tr>
+<td class="reference"><b id="Architecture">[Architecture]</b></td>
+<td class="top">
+<a title="ARM Limited">Moran, B.</a>, "<a>A Firmware Update Architecture for Internet of Things Devices</a>", July 2018.</td>
+</tr>
+<tr>
+<td class="reference"><b id="Information">[Information]</b></td>
+<td class="top">
+<a title="ARM Limited">Moran, B.</a>, "<a>Firmware Updates for Internet of Things Devices - An Information Model for Manifests</a>", July 2018.</td>
+</tr>
+</tbody></table>
+<h1 id="rfc.authors"><a href="#rfc.authors">Authors' Addresses</a></h1>
+<div class="avoidbreak">
+  <address class="vcard">
+	<span class="vcardline">
+	  <span class="fn">Brendan Moran</span> 
+	  <span class="n hidden">
+		<span class="family-name">Moran</span>
+	  </span>
+	</span>
+	<span class="org vcardline">ARM Limited</span>
+	<span class="adr">
+	  
+	  <span class="vcardline">
+		<span class="locality"></span> 
+		<span class="region"></span>
+		<span class="code"></span>
+	  </span>
+	  <span class="country-name vcardline"></span>
+	</span>
+	<span class="vcardline">EMail: <a href="mailto:Brendan.Moran@arm.com">Brendan.Moran@arm.com</a></span>
+
+  </address>
+</div><div class="avoidbreak">
+  <address class="vcard">
+	<span class="vcardline">
+	  <span class="fn">Hannes Tschofenig</span> 
+	  <span class="n hidden">
+		<span class="family-name">Tschofenig</span>
+	  </span>
+	</span>
+	<span class="org vcardline">ARM Limited</span>
+	<span class="adr">
+	  
+	  <span class="vcardline">
+		<span class="locality"></span> 
+		<span class="region"></span>
+		<span class="code"></span>
+	  </span>
+	  <span class="country-name vcardline"></span>
+	</span>
+	<span class="vcardline">EMail: <a href="mailto:hannes.tschofenig@gmx.net">hannes.tschofenig@gmx.net</a></span>
+
+  </address>
+</div>
+
+</body>
+</html>
