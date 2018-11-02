@@ -29,6 +29,7 @@ import cbor
 import sys
 import ed25519
 import eddsa
+import copy
 
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes
@@ -45,102 +46,101 @@ APPLICATION_OCTET_STREAM_ID = 42
 ES256 = -7
 EDDSA = -8
 
-private_key = None
-algo = ES256
-with open(sys.argv[1], 'rb') as fd:
-    priv_key_bytes = fd.read()
-    try:
-        private_key = serialization.load_pem_private_key(priv_key_bytes, password=None, backend=default_backend())
-    except ValueError:
-        algo = EDDSA
-        private_key = ed25519.SigningKey(eddsa.parse_privkey(priv_key_bytes))
+def signWrapper(algo, private_key, public_key, encwrapper):
+    wrapper = cbor.loads(encwrapper)
 
+    COSE_Sign = copy.deepcopy(wrapper[1])
+    if not COSE_Sign:
+        protected = cbor.dumps({
+            3: APPLICATION_OCTET_STREAM_ID, # Content Type
+        })
+        unprotected = {
+        }
+        signatures = []
+        # Create a COSE_Sign_Tagged object
+        COSE_Sign = [
+            protected,
+            unprotected,
+            None,
+            signatures
+        ]
 
-public_key = None
-with open(sys.argv[2], 'rb') as fd:
-    pub_key_bytes = fd.read()
-    try:
-        public_key = serialization.load_pem_public_key(pub_key_bytes, backend=default_backend())
-    except ValueError:
-        public_key = ed25519.VerifyingKey(eddsa.parse_pubkey(pub_key_bytes))
+    if algo == EDDSA:
+        public_bytes = public_key.to_bytes()
+    else:
+        public_bytes = public_key.public_bytes(serialization.Encoding.DER,
+                            serialization.PublicFormat.SubjectPublicKeyInfo)
 
-# Read the input file
-doc = None
-with open(sys.argv[3], 'rb') as fd:
-    doc = fd.read()
-
-# Check if the content is already a COSE_Sign_Tagged
-isCOSE_Sign_Tagged = False
-COSE_Sign = []
-try:
-    decodedDoc = cbor.loads(doc)
-    if isinstance(decodedDoc, cbor.Tag) and decodedDoc.tag == COSE_Sign_Tag:
-        isCOSE_Sign_Tagged = True
-        COSE_Sign = decodedDoc.value
-except:
-    pass
-
-if not isCOSE_Sign_Tagged:
+    # NOTE: Using RFC7093, Method 4
+    digest = hashes.Hash(hashes.SHA256(), backend=default_backend())
+    digest.update(public_bytes)
+    kid = digest.finalize()
+    # Sign the payload
     protected = cbor.dumps({
-        3: APPLICATION_OCTET_STREAM_ID, # Content Type
-    })
+        1: algo, # alg
+    })    # Create the signing object
     unprotected = {
+        4: kid #kid
     }
-    payload = doc
-    signatures = []
-    # Create a COSE_Sign_Tagged object
-    COSE_Sign = [
+
+    Sig_structure = [
+        "Signature", # Context
+        COSE_Sign[0], # Body Protected
+        protected, # signature protected
+        b'', # External AAD
+        wrapper[2] # payload
+    ]
+    sig_str = cbor.dumps(Sig_structure, sort_keys=True)
+
+    if algo == EDDSA:
+        signature = private_key.sign(sig_str)
+    else:
+        signature = private_key.sign(
+            sig_str,
+            ec.ECDSA(hashes.SHA256())
+        )
+
+    COSE_Signature = [
         protected,
         unprotected,
-        payload,
-        signatures
+        signature
     ]
-
-if algo == EDDSA:
-    public_bytes = public_key.to_bytes()
-else:
-    public_bytes = public_key.public_bytes(serialization.Encoding.DER,
-                        serialization.PublicFormat.SubjectPublicKeyInfo)
-
-# NOTE: Using RFC7093, Method 4
-digest = hashes.Hash(hashes.SHA256(), backend=default_backend())
-digest.update(public_bytes)
-kid = digest.finalize()
-# Sign the payload
-protected = cbor.dumps({
-    1: algo, # alg
-    4: kid #kid
-})
-
-unprotected = {
-}
-Sig_structure = [
-   "Signature", # Context
-   COSE_Sign[0], # Body Protected
-   protected, # signature protected
-   b'', # External AAD
-   COSE_Sign[2]
-]
-
-sig_str = cbor.dumps(Sig_structure)
-
-if algo == EDDSA:
-    signature = private_key.sign(sig_str)
-else:
-    signature = private_key.sign(
-        sig_str,
-        ec.ECDSA(hashes.SHA256())
-    )
+    COSE_Sign[3].append(COSE_Signature)
+    wrapper[1] = cbor.Tag(COSE_Sign_Tag,COSE_Sign)
+    return wrapper
 
 
-COSE_Signature = [
-    protected,
-    unprotected,
-    signature
-]
 
-COSE_Sign[3].append(COSE_Signature)
+def main():
+    private_key = None
+    algo = ES256
+    with open(sys.argv[1], 'rb') as fd:
+        priv_key_bytes = fd.read()
+        try:
+            private_key = serialization.load_pem_private_key(priv_key_bytes, password=None, backend=default_backend())
+        except ValueError:
+            algo = EDDSA
+            private_key = ed25519.SigningKey(eddsa.parse_privkey(priv_key_bytes))
 
-with open(sys.argv[4], 'wb') as fd:
-    COSE_Sign_Tagged = cbor.Tag(98, COSE_Sign)
-    fd.write(cbor.dumps(COSE_Sign_Tagged))
+
+    public_key = None
+    with open(sys.argv[2], 'rb') as fd:
+        pub_key_bytes = fd.read()
+        try:
+            public_key = serialization.load_pem_public_key(pub_key_bytes, backend=default_backend())
+        except ValueError:
+            public_key = ed25519.VerifyingKey(eddsa.parse_pubkey(pub_key_bytes))
+
+    # Read the input file
+    doc = None
+    with open(sys.argv[3], 'rb') as fd:
+        doc = fd.read()
+
+    outDoc = signWrapper(algo, private_key, public_key, doc)
+
+
+    with open(sys.argv[4], 'wb') as fd:
+        fd.write(cbor.dumps(outDoc, sort_keys=True))
+
+if __name__ == '__main__':
+    main()
