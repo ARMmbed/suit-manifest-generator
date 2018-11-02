@@ -315,8 +315,6 @@ class Manifest(CDDLStruct):
     def to_pod(self):
         data_pod = super(Manifest, self).to_pod()
         pod = {1 : None}
-        print('manifest data 1: {}'.format(data_pod))
-        print('wrapper data 1: {}'.format(pod))
         for r in self.refKeyMap:
             if r in self.data_dict:
                 cbor_element = cbor.dumps(self.data_dict[r].to_pod(), sort_keys=True)
@@ -326,10 +324,7 @@ class Manifest(CDDLStruct):
                 else:
                     data_pod[self.keyMap[r]] = self.data_dict[r + 'Ref'].to_pod()
                     pod[self.refKeyMap[r]] = cbor_element
-        print('manifest data 2: {}'.format(data_pod))
-        print('wrapper data 2: {}'.format(pod))
         pod[2] = cbor.dumps(data_pod, sort_keys=True)
-        print('wrapper data 3: {}'.format(pod))
         return pod
 
 
