@@ -1,12 +1,10 @@
 {
     "manifestVersion" : 1,
     "sequence" : 2,
-    "preInstall" : {
-        "preConditions" : [
-            ["vendorId", "fa6b4a53-d5ad-5fdf-be9d-e663e4d41ffe"],
-            ["classId", "6e04d3c2-4887-59e4-a597-b5e7cd497653"]
-        ]
-    },
+    "conditions" : [
+        ["vendorId", "fa6b4a53-d5ad-5fdf-be9d-e663e4d41ffe"],
+        ["classId", "6e04d3c2-4887-59e4-a597-b5e7cd497653"]
+    ],
     "payloads" : [{
         "component" : ["0"],
         "payloadFile" : "draft-moran-suit-manifest-03.html",
