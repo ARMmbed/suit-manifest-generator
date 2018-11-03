@@ -1,0 +1,34 @@
+{
+  1 : null ,                                 / authenticationWrapper /
+  2: << {                                    / manifest /
+      1 : 1,                                 / manifestVersion /
+      2: 1,                                  / sequence /
+      5: [                                   / payloads /
+         {
+            1: [h'30'],                      / payloadComponent /
+            2: 67,                           / payloadSize /
+            3: [                             / payloadDigest /
+                << {                         / protected /
+                    1 : 41                   / alg sha-256 /
+                } >>,
+                {},                          / unprotected /
+                null,                        / payload /
+                                             / tag /
+                h'8caf9283b13666ca4e50f7a1eee86ba40
+                  b5e6a1d2ca39f7498b6a6a7be8d8d67'
+            ]
+        }
+         ],
+       6: [                                     / install /
+          {
+          1: << {                               / payloadInstallationInfo /
+            1: [h'30'],                         / installComponent /
+            2: << {                             / payloadProcessors /
+               1: [1,1],                        / processorid/
+               3: [ 0, "http://foo.bar/baz.bin"] / inputs /
+            } >>
+        }>>
+      }
+    ]
+   } >>
+ }
