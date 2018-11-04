@@ -224,15 +224,12 @@ network-disconnect-directive = 6
 custom-directive = [ nint,
                      ? parameters: bytes,
                    ]
-installation-info = { payload-installation-infos : [ + payload-installation-info ]
-}
-payload-installation-infos = 1
-payload-installation-info = { install-component : component-identifier,
-                              ? payload-processors : [ + processor ],
-                              ? allow-override : bool,
-                              ? payload-installer: { payload-installer-id,
-                                                     ? payload-installer-parameters,
-                                                   }
+installation-info = { payload-installation-infos }
+payload-installation-infos = (1: [ + payload-installation-info ])
+payload-installation-info = { install-component,
+                              ? payload-processors,
+                              ? allow-override,
+                              ? payload-installer,
                             }
 install-component = (1: component-identifier)
 payload-processors = (2: [ + processor ])
