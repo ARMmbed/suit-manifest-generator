@@ -16,9 +16,8 @@ textExt = 6
 coswidExt = 7
 
 concise-software-identity = any
-AuthenticationWrapper = COSE_Mac_Tagged / COSE_Sign_Tagged / 
+AuthenticationWrapper = COSE_Mac_Tagged / COSE_Sign_Tagged /
                         COSE_Mac0_Tagged / COSE_Sign1_Tagged
-
 label = int / tstr
 values = any
 
@@ -89,7 +88,7 @@ SequenceNumber = uint
 
 DependencyInfo = {
     depDigest  : COSE_Digest,         ; digest of the resource
-    depScope   : ComponentIdentifier, ; where the dependency's 
+    depScope   : ComponentIdentifier, ; where the dependency's
                                       ; payloads will be applied
     ? depUris  : UriList              ; where to find the resource
                                      ; applied
@@ -158,10 +157,10 @@ Uuid = bstr .size 16
 
 TimeCondition   = [useBy: 4,
                    time:       Timestamp]
-ImageCondition  = [ currentContent : 6 ,  
+ImageCondition  = [ currentContent : 6 ,
                    digest: COSE_Digest / nil,
                    location: ComponentIdentifier ] /
-                  [ notCurrentContent : 7 ,  
+                  [ notCurrentContent : 7 ,
                    digest: COSE_Digest / nil,
                    location: ComponentIdentifier ]
 BatteryLevelCondition = [ batteryLevel: 8,
@@ -213,7 +212,7 @@ payloadInstallerParameters = 6
 
 Processor       = {
     processorId:       ProcessorID
-    parameters:        COSE_Digest / COSE_Encrypt / COSE_Encrypt0 / 
+    parameters:        COSE_Digest / COSE_Encrypt / COSE_Encrypt0 /
                        int / tstr / bstr / nil,
     inputs:            UriList / ComponentIdentifier / {int => int}
 }
