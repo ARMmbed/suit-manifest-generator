@@ -1,0 +1,21 @@
+{
+    "digest-type" : "sha-256",
+    "structure-version" : 1,
+    "sequence-number" : 2,
+    "components": [
+        {
+            "component-id":["00"],
+            "bootable" : true,
+            "images" : [
+                {
+                    "file" : "encode-04.py",
+                    "uri" : "http://example.com/file.bin"
+                }
+            ]
+        }
+    ],
+    "conditions" : [
+        {"condition-vendor-id" : "fa6b4a53-d5ad-5fdf-be9d-e663e4d41ffe"},
+        {"condition-class-id" : "1492af14-2569-5e48-bf42-9b2d51f2ab45"}
+    ]
+}

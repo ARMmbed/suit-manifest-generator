@@ -540,7 +540,7 @@ def pretty_print_simple_command(indent, name, k, v):
 
 def pretty_print_command_sequence(indent, name, k,v):
     lcs = cbor.loads(v)
-    print('{}/ {} / {} : ['.format(indent, name, k))
+    print('{} / {} / {} : h\'{}\' / ['.format(indent, name, binascii.b2a_hex(v), k))
     indent += ' '*4
     for c in lcs:
         for k,v in c.items():
