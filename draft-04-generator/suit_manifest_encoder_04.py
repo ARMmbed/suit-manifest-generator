@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # ----------------------------------------------------------------------------
-# Copyright 2018 ARM Limited or its affiliates
+# Copyright 2019 ARM Limited or its affiliates
 #
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -184,7 +184,7 @@ def make_SUIT_Sequence(seq_name, sequence):
         # SUIT_Condition_Minimum_Battery = 7
         # SUIT_Condition_Update_Authorised = 8
         # SUIT_Condition_Version = 9
-        # SUIT_Condition_Component_Offset = 10
+        "condition-component-offset" : lambda x: (SUIT_Condition_Component_Offset, int(x)),
         #
         "directive-set-component"   : lambda x : (SUIT_Directive_Set_Component_Index, x),
         # SUIT_Directive_Set_Manifest_Index = 12
@@ -366,11 +366,35 @@ def compile_to_suit(suit_info):
             }
             apply_image.append(set_comp)
             apply_image.append(set_params)
-            if comp.get('bootable', False):
-                run_image.append({'directive-set-component' : i})
-                run_image.append({'directive-run':None})
         else:
-            raise Exception("Conditional images not supported")
+            for image in comp['images']:
+                set_comp = {"directive-set-component": i}
+                set_params = {
+                    "directive-set-var" : {
+                        "image-size" : int(image['size']),
+                        "image-digest" : [digest_id, bytes(image['digest'])]
+                    }
+                }
+                conditional_seq = [set_comp] + image.get('conditions',[])[:] + [set_params]
+                conditional_set_params = {
+                    'directive-run-conditional': conditional_seq
+                }
+                common.append(conditional_set_params)
+                set_params = {
+                    "directive-set-var" : {
+                        "uris" : [[0, str(image['uri'])]]
+                    }
+                }
+                conditional_seq = [set_comp] + image.get('conditions',[])[:] + [set_params]
+                conditional_set_params = {
+                    'directive-run-conditional': conditional_seq
+                }
+
+                apply_image.append(conditional_set_params)
+        if comp.get('bootable', False):
+            run_image.append({'directive-set-component' : i})
+            run_image.append({'directive-run':None})
+
         apply_image.append({"directive-set-component": True})
         apply_image.append({"directive-fetch": None})
 

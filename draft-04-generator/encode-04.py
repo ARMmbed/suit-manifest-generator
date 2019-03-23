@@ -34,7 +34,9 @@ JSON format:
                     "digest" : "<hex digest>",
                     "size"   : <size of image>,
                     "uri"    : "http://path.to/file.bin",
-                    "conditions" : []
+                    "conditions" : [
+                        {"component-offset": <offset of storage location>}
+                    ]
                 }
             ],
             "conditions" : []
@@ -104,6 +106,11 @@ def json_image_to_indoc(jdoc):
         indoc['size'] = jdoc['size']
     if 'uri' in jdoc:
         indoc['uri'] = jdoc['uri']
+    if 'conditions' in jdoc:
+        conditions = []
+        for cond in jdoc['conditions']:
+            conditions.append(json_condition_to_indoc(cond))
+        indoc['conditions'] = conditions
     return indoc
 
 def json_component_to_indoc(jdoc):
