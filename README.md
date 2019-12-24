@@ -1,12 +1,10 @@
 # Manifest Generator
-# Information Flow
 
+This repository contains a tool to generate manifests following the specification in https://tools.ietf.org/html/draft-ietf-suit-manifest-02.
 
-Defaults   -----+
-                V
-Input file -> Compiler ---> Manifest object ---> Encoder ---> Signer
-                ^
-Args       -----+
+This repository does contain two encoding changes from draft-ietf-suit-manifest-02: the manifest key in the outer wrapper is changed from 2 to 3, and the COSE_Sign contains a SUIT Digest of the manifest. This is for the reasons stated in [this post](https://mailarchive.ietf.org/arch/msg/suit/DsTWu6PDS5QuHhvK62p71mSkXdg) to the mailing list.
+
+It is anticipated that draft-ietf-suit-manifest-03 will adopt this change.
 
 # Input File Description
 
