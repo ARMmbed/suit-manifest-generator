@@ -94,18 +94,18 @@ def compile_manifest(options, m):
         dgst = c['install-digest']
         cid = SUITComponentId().from_json(id)
         # TODO: Conditions
-        if 'vendor-identifier' in c:
+        if 'vendor-id' in c:
             CommonSeq.append(SUITCommand().from_json({
                 'component-id' : cid.to_json(),
                 'command-id' :  'condition-vendor-identifier',
-                'command-arg' : c['vendor-identifier']
+                'command-arg' : c['vendor-id']
             }))
 
-        if 'class-identifier' in c:
+        if 'class-id' in c:
             CommonSeq.append(SUITCommand().from_json({
                 'component-id' : cid.to_json(),
                 'command-id' :  'condition-class-identifier',
-                'command-arg' : c['class-identifier']
+                'command-arg' : c['class-id']
             }))
         CommonSeq.append(SUITCommand().from_json({
             'component-id' : cid.to_json(),
@@ -126,7 +126,7 @@ def compile_manifest(options, m):
         if c.get('install-on-download', True) and 'uri' in c:
             cid = SUITComponentId().from_json(c['install-id'])
             params = {'uri' : c['uri']}
-            if 'compression-info' in c and c.get('decompress-on-load', False):
+            if 'compression-info' in c and not c.get('decompress-on-load', False):
                 params['compression-info'] = c['compression-info']
             InstSeq.append(SUITCommand().from_json({
                 'component-id' : cid.to_json(),
@@ -154,7 +154,7 @@ def compile_manifest(options, m):
                     'uri' : c['uri'],
                     'image-digest' : dldigest
                 }
-                if 'compression-info' in c and c.get('decompress-on-load', False):
+                if 'compression-info' in c and not c.get('decompress-on-load', False):
                     params['compression-info'] = c['compression-info']
 
                 cid = SUITComponentId().from_json(c['download-id'])
@@ -227,7 +227,7 @@ def compile_manifest(options, m):
                     'image-digest' : c.get('load-digest', c['install-digest']),
                     'image-size' : c.get('load-size', c['install-size'])
                 }
-                if c.get('decompress-on-load', False):
+                if 'compression-info' in c and c.get('decompress-on-load', False):
                     loadparams['compression-info'] = c['compression-info']
 
                 LoadSeq.append(SUITCommand().from_json({
