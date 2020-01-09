@@ -21,6 +21,7 @@ import collections
 import binascii
 import cbor
 import copy
+import uuid
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes
 
@@ -261,7 +262,7 @@ class SUITBytes:
     def __eq__(self, rhs):
         return self.v == rhs.v
 
-class SUITUUID:
+class SUITUUID(SUITBytes):
     def from_json(self, d):
         self.v = uuid.UUID(d).bytes
         return self
@@ -269,7 +270,7 @@ class SUITUUID:
         self.v = uuid.UUID(bytes=d).bytes
         return self
     def to_debug(self, indent):
-        return 'h\'' + self.to_json() + '\' / ' + str(self.v) + ' /'
+        return 'h\'' + self.to_json() + '\' / ' + str(uuid.UUID(bytes=self.v)) + ' /'
 
 
 class SUITRaw:
@@ -430,8 +431,8 @@ class SUITCommand:
         return self.scommands[s[0]]().from_suit(s)
 
 SUITCommand.commands = [
-    SUITCommandContainer('condition-vendor-identifier',    1,  SUITBytes),
-    SUITCommandContainer('condition-class-identifier',     2,  SUITBytes),
+    SUITCommandContainer('condition-vendor-identifier',    1,  SUITUUID),
+    SUITCommandContainer('condition-class-identifier',     2,  SUITUUID),
     SUITCommandContainer('condition-image-match',          3,  SUITNil),
     SUITCommandContainer('condition-use-before',           4,  SUITRaw),
     SUITCommandContainer('condition-component-offset',     5,  SUITRaw),
