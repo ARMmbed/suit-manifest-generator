@@ -71,7 +71,7 @@ def compile_manifest(options, m):
     CommonSeq = SUITSequence()
     for c in m['components']:
         if not 'install-id' in c:
-            LOG.critical('install-id required for all ')
+            LOG.critical('install-id required for all components')
         id = c['install-id']
         imgsize = c.get('install-size', 0)
         if 'file' in c:

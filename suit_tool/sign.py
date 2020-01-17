@@ -29,6 +29,9 @@ from cryptography.hazmat.primitives import serialization as ks
 
 from suit_tool.manifest import COSE_Sign1, COSEList, SUITDigest,\
                                SUITWrapper, SUITBytes, SUITBWrapField
+import logging
+import binascii
+LOG = logging.getLogger(__name__)
 
 def main(options):
     # Read the manifest wrapper
@@ -51,11 +54,12 @@ def main(options):
 
     Sig_structure = cbor.dumps([
         "Signature1",
-        cbor.dumps(cose_signature.protected.to_suit(), sort_keys=True),
+        cose_signature.protected.to_suit(),
         b'',
-        cbor.dumps(cose_signature.payload.to_suit(), sort_keys=True),
+        cose_signature.payload.to_suit(),
     ], sort_keys = True)
     sig_val = cbor.dumps(Sig_structure, sort_keys = True)
+    LOG.debug('Signing: {}'.format(binascii.b2a_hex(sig_val).decode('utf-8')))
 
 
     ASN1_signature = private_key.sign(sig_val, ec.ECDSA(hashes.SHA256()))
