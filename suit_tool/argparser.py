@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 # ----------------------------------------------------------------------------
-# Copyright 2019 ARM Limited or its affiliates
+# Copyright 2019-2020 ARM Limited or its affiliates
 #
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -70,6 +70,10 @@ class MainArgumentParser(object):
 
         parse_parser.add_argument('-m', '--manifest', metavar='FILE', type=argparse.FileType('rb'), required=True)
         parse_parser.add_argument('-j', '--json-output', default=False, action='store_true', dest='json')
+
+        get_uecc_pubkey_parser = subparsers.add_parser('pubkey', help='Get the public key for a supplied private key in uECC-compatible C definition.')
+
+        get_uecc_pubkey_parser.add_argument('-k', '--private-key', metavar='FILE', type=argparse.FileType('rb'), required=True)
 
         return parser
 

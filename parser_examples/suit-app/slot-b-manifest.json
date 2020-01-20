@@ -1,0 +1,13 @@
+{
+    "components" : [
+        {
+            "install-id" : ["00"],
+            "bootable" : true,
+            "file" : "slot_b/suit-app_update.bin",
+            "vendor-id" : "fa6b4a53-d5ad-5fdf-be9d-e663e4d41ffe",
+            "class-id" : "1492af14-2569-5e48-bf42-9b2d51f2ab45"
+        }
+    ],
+    "manifest-version": 1,
+    "manifest-sequence-number": 2
+}
