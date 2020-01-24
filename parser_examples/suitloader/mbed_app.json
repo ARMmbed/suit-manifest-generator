@@ -1,0 +1,68 @@
+{
+    "requires": ["bare-metal",
+                 "rtos-api",
+                 "storage",
+                 "storage_filesystem",
+                 "SecureStore",
+                 "storage_tdb_internal",
+                 "mbed-bootloader",
+                 "mbedtls",
+                 "system-storage",
+                 "filesystem",
+                 "filesystemstore",
+                 "littlefs",
+                 "fat_chan",
+                 "spif",
+                 "qspif",
+                 "sd",
+                 "flashiap-block-device",
+                 "direct-access-devicekey",
+                 "tdbstore",
+                 "device_key",
+                 "mbed-trace"
+    ],
+    "config": {
+        "documentation": {
+            "options": [
+                    "The following memory map describes the partitioning of the NRF52840_DK",
+                    "+--------------------------+ <-+ 0x100000",
+                    "|                          |",
+                    "|        Slot B App        | Size: 0x7BC00",
+                    "|                          |",
+                    "+--------------------------+ <-+ 0x84400",
+                    "|  Slot B Metadata Header  |",
+                    "+--------------------------+ <-+ 0x84000",
+                    "|                          |",
+                    "|        Slot A App        | Size: 0x7BC00",
+                    "|                          |",
+                    "+--------------------------+ <-+ 0x8400",
+                    "|  Slot A Metadata Header  |",
+                    "+--------------------------+ <-+ 0x8000",
+                    "|                          |",
+                    "|        Bootloader        |",
+                    "|                          |",
+                    "+--------------------------+ <-+ 0"
+            ]
+        }
+    },
+    "macros": [
+        "SUIT_BOOTLOADER_SLOT_A_OFFSET=0x8000",
+        "SUIT_BOOTLOADER_SLOT_B_OFFSET=0x84000",
+        "SUIT_BOOTLOADER_HEADER_SIZE=0x400"
+    ],
+    "target_overrides": {
+        "*": {
+            "target.default_lib"                       : "small",
+            "platform.use-mpu"                         : false,
+            "platform.default-serial-baud-rate"        : 115200,
+            "mbed-bootloader.use-kvstore-rot"          : 0,
+            "target.restrict_size"                     : "0x8000",
+        },
+        "NRF52840_DK": {
+            "target.static_memory_defines"     : true,
+            "target.features_remove"           : ["CRYPTOCELL310"],
+            "target.macros_remove"             : ["MBEDTLS_CONFIG_HW_SUPPORT"],
+            "target.macros_add"                : ["NRFX_RNG_ENABLED=1", "RNG_ENABLED=1", "NRF_QUEUE_ENABLED=1"]
+        }
+    }
+}

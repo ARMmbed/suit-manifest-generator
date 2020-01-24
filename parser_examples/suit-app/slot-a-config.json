@@ -1,0 +1,17 @@
+{
+    "macros" : ["BLINKY_VERSION_STRING=\"SLOT_A v3\""],
+    "target_overrides": {
+        "*": {
+            "platform.stdio-convert-newlines" : true,
+            "platform.stdio-baud-rate": 115200
+        },
+        "NRF52840_DK": {
+            "target.static_memory_defines"     : true,
+            "target.features_remove"           : ["CRYPTOCELL310"],
+            "target.macros_remove"             : ["MBEDTLS_CONFIG_HW_SUPPORT"],
+            "target.macros_add"                : ["NRFX_RNG_ENABLED=1", "RNG_ENABLED=1", "NRF_QUEUE_ENABLED=1"],
+            "target.mbed_app_start"            : "0x8400",
+            "target.mbed_app_size"             : "0x7BC00"
+        }
+    }
+}
