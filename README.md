@@ -1,81 +1,202 @@
-# suit-manifest-generator
-This repo will contain a prototype manifest generator following the specification in the SUIT draft (https://tools.ietf.org/html/draft-moran-suit-manifest-01)
+# Manifest Generator
+
+This repository contains a tool to generate manifests following the specification in https://tools.ietf.org/html/draft-ietf-suit-manifest-02.
+
+This repository does contain two encoding changes from draft-ietf-suit-manifest-02:
+   1. key changes: authentication wrapper key is changed from 1 to 2 and the manifest key in the outer wrapper is changed from 2 to 3
+   2. the COSE_Sign contains a SUIT Digest of the manifest.
+   
+These changes are for the reasons stated in [this post](https://mailarchive.ietf.org/arch/msg/suit/DsTWu6PDS5QuHhvK62p71mSkXdg) to the mailing list.
+
+It is anticipated that draft-ietf-suit-manifest-03 will adopt this change.
+
+# Input File Description
+
+The input file is organised into four high-level elements:
+
+* `manifest-version` (a positive integer), the version of the manifest specification
+* `manifest-sequence-number` (a positive integer), the anti-rollback counter of the manifest
+* `components`, a list of components that are described by the manifest
 
 
-To encode:
-```
-python3 ./encode.py ./test-file.json ./test-out.cbor
-```
+Each component is a JSON map that may contain the following elements. Some elements are required for the target to be able to install the component.
 
-NOTE: aliases, dependencies, and extensions are not supported in this version.
+Required elements:
 
-To sign:
-```
-openssl ecparam -name secp256r1 -out secp256r1.pem
-openssl ecparam -in secp256r1.pem -genkey -noout -out secp256r1-key.pem
-openssl ec -in secp256r1-key.pem -pubout -out ecpubkey.pem
+* `install-id` (a Component ID), the identifier of the location to install the described component.
+* `install-digest` (a SUIT Digest), the digest of the component after installation.
+* `install-size` (a positive integer), the size of the component after installation.
+* `vendor-id` (a RFC 4122 UUID), the UUID for the component vendor. This must match the UUID that the manifest processor expects for the specified `install-id`. The suit-tool expects at least one component to have a `vendor-id`
+* `class-id` (a RFC 4122 UUID), the UUID for the component. This must match the UUID that the manifest processor expects for the specified `install-id`. The `suit-tool` expects at least one component with a `vendor-id` to also have a `class-id`
+* `file` (a string), the path to a payload file. The `install-digest` and `install-size` will be calculated from this file.
 
-python3 ./sign.py secp256r1-key.pem ecpubkey.pem ./test-out.cbor ./test-out-signed.cose
-```
+Some elements are not required by the tool, but are necessary in order to accomplish one or more use-cases.
 
-To see what was created:
-```
->>> import cbor
->>> fd = open('test-out-signed.cose','rb')
->>> s = fd.read()
->>> pod = cbor.loads(s)
->>> print(pod)
-{1: Tag(98, [b'\xa1\x03\x18*', {}, None, [[b'\xa1\x01&', {4: b"l$S'\xd8\x19\xb8\xb4}k\x85_\x1b\x8c\xda \xd9\x98\x11\x7f\x85\xccY\x04B\x14\x1e\xcc\x89\xc2w\xfa"}, b"0F\x02!\x00\xb8\x0c9\x02]\t\xa7\x9e\x9f\x92J:\x87fI}\xde\xf6\xcc\xee\xe7\xbc\x11\x8aY^\x9e\xefC\xd4@\xa8\x02!\x00\xd6q\x82\xf42\xe2\x13T\x8e\x18\x96\x97U\x1d1\x9dW\xfa\xc4\x84\x14M\xb9\xbc?'@\xe5s\x8du7"]]]), 2: b"\xa5\x01\x01\x02\x02\x05\x81\xa3\x01\x81A0\x02\x1a\x00\x01p\xde\x03\x84D\xa1\x01\x18)\xa0\xf6X P4\xd9\x9a\x08]\xce\xf3y\xec\xa72~P\x1b\xc2&_\x1dP\xf6\x8c\xca\x17X.\x7fJ4\x1d\xc3e\x06\x84D\xa1\x01\x18)\xa0\xf6X \xbe\x86\xe5\xed\xac\x07\x82,\xde\x9d\x81z1\xbd\x82\xdc\xae\xe3\x98\xe6\xe4'\x87]\xbc)\xfbh\x1de\x94v\x08\x84D\xa1\x01\x18)\xa0\xf6X N'\x14Y\x84y\xd8\xb6cH\x05\xdfP\x19\xef4 \xed\xff\x03)\x89J\xcc\x91\xde\x8c\x8d\xe1o\xb0\xcf", 4: b'\xa1\x01\x81\xa2\x01\x81A0\x02\x81\xa2\x01\x82\x01\x01\x03\x82\x00x8https://tools.ietf.org/html/draft-moran-suit-manifest-03', 6: b'\xa1\x01x\xc8Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc sed tincidunt ante, a sodales ligula. Phasellus ullamcorper odio commodo ipsum egestas, vitae lacinia leo ornare. Suspendisse posuere sed.'}
-```
+Optional elements:
 
-This shows a OuterWrapper structure that contains a CoseSign_Tagged structure.
-```
+* `bootable` (a boolean, default: `false`), when set to true, the `suit-tool` will generate commands to execute the component, either from `install-id` or from `load-id` (see below)
+* `uri` (a text string), the location at which to find the payload. This element is required in order to generate the `payload-fetch` and `install` sections.
+* `loadable` (a boolean, default: `false`), when set to true, the `suit-tool` loads this component in the `load` section.
+* `compression-info` (a choice of string values), indicates how a payload is compressed. When specified, payload is decompressed before installation. The `install-size` must match the decompressed size of the payload and the install-digest must match the decompressed payload. N.B. The suit-tool does not perform compression. Supported values are:
+
+    * `gzip`
+    * `bzip2`
+    * `deflate`
+    * `lz4`
+    * `lzma`
+
+* `download-digest` (a SUIT Digest), a digest of the component after download. Only required if `compression-info` is present and `decompress-on-load` is `false`.
+* `decompress-on-load` (a boolean, default: `false`), when set to true, payload is not decompressed during installation. Instead, the payload is decompressed during loading. This element has no effect if `loadable` is `false`.
+* `load-digest` (a SUIT Digest), a digest of the component after loading. Only required if `decompress-on-load` is `true`.
+* `install-on-download` (boolean, default: true), If true, payload is written to `install-id` during download, otherwise, payload is written to `download-id`.
+* `download-id` (a component id), the location where a downloaded payload should be stored before installation--only used when `install-on-download` is `false`.
+
+## Component ID
+
+The `suit-tool` expects component IDs to be a JSON list of strings. The `suit-tool` converts the strings to bytes by:
+
+1. Attempting to convert from hex
+2. Attempting to convert from base64
+3. Encoding the string to UTF-8
+
+For example,
+
+* `["00"]` will encode to `814100` (`[h'00']`)
+* `["0"]` will encode to `814130` (`[h'30']`)
+* `["MTIzNA=="]` will encode to `814431323334` (`[h'31323334']`)
+* `["example"]` will encode to `81476578616D706C65` (`[h'6578616d706c65']`)
+
+N.B. Be careful that certain strings can appear to be hex or base64 and will be treated as such. Any characters outside the set `[0-9a-fA-F]` ensure that the string is not treated as hex. Any characters outside the set `[0-9A-Za-z+/]` or a number of characters not divisible by 4 will ensure that the string is not treated as base64.
+
+## SUIT Digest
+
+The format of a digest is a JSON map:
+
+```JSON
 {
-    1: Tag(98, [
-        b'\xa1\x03\x18*',
-        {},
-        None,
-        [[  b'\xa1\x01&', 
-            {4: b"l$S'\xd8\x19\xb8\xb4}k\x85_\x1b\x8c\xda \xd9\x98\x11\x7f\x85\xccY\x04B\x14\x1e\xcc\x89\xc2w\xfa"},
-                b"0F\x02!\x00\xb8\x0c9\x02]\t\xa7\x9e\x9f\x92J:\x87fI}\xde\xf6\xcc\xee\xe7\xbc\x11\x8aY^\x9e\xefC\xd4@\xa8\x02!\x00\xd6q\x82\xf42\xe2\x13T\x8e\x18\x96\x97U\x1d1\x9dW\xfa\xc4\x84\x14M\xb9\xbc?'@\xe5s\x8du7"]]
-        ]), 
-    2: b"\xa5\x01\x01\x02\x02\x05\x81\xa3\x01\x81A0\x02\x1a\x00\x01p\xde\x03\x84D\xa1\x01\x18)\xa0\xf6X P4\xd9\x9a\x08]\xce\xf3y\xec\xa72~P\x1b\xc2&_\x1dP\xf6\x8c\xca\x17X.\x7fJ4\x1d\xc3e\x06\x84D\xa1\x01\x18)\xa0\xf6X \xbe\x86\xe5\xed\xac\x07\x82,\xde\x9d\x81z1\xbd\x82\xdc\xae\xe3\x98\xe6\xe4'\x87]\xbc)\xfbh\x1de\x94v\x08\x84D\xa1\x01\x18)\xa0\xf6X N'\x14Y\x84y\xd8\xb6cH\x05\xdfP\x19\xef4 \xed\xff\x03)\x89J\xcc\x91\xde\x8c\x8d\xe1o\xb0\xcf",
-    4: b'\xa1\x01\x81\xa2\x01\x81A0\x02\x81\xa2\x01\x82\x01\x01\x03\x82\x00x8https://tools.ietf.org/html/draft-moran-suit-manifest-03', 
-    6: b'\xa1\x01x\xc8Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc sed tincidunt ante, a sodales ligula. Phasellus ullamcorper odio commodo ipsum egestas, vitae lacinia leo ornare. Suspendisse posuere sed.'
+    "algorithm-id" : "sha256",
+    "digest-bytes" : "base64-or-hex"
 }
 ```
-Examining the manifest inside shows:
 
-```
->>> Manifest = cbor.loads(pod[2])
->>> print(Manifest)
-{1: 1, 2: 2, 5: [{1: [b'0'], 2: 94430, 3: [b'\xa1\x01\x18)', {}, None, b'P4\xd9\x9a\x08]\xce\xf3y\xec\xa72~P\x1b\xc2&_\x1dP\xf6\x8c\xca\x17X.\x7fJ4\x1d\xc3e']}], 6: [b'\xa1\x01\x18)', {}, None, b"\xbe\x86\xe5\xed\xac\x07\x82,\xde\x9d\x81z1\xbd\x82\xdc\xae\xe3\x98\xe6\xe4'\x87]\xbc)\xfbh\x1de\x94v"], 8: [b'\xa1\x01\x18)', {}, None, b"N'\x14Y\x84y\xd8\xb6cH\x05\xdfP\x19\xef4 \xed\xff\x03)\x89J\xcc\x91\xde\x8c\x8d\xe1o\xb0\xcf"]}
-```
+The `algorithm-id` must be one of:
 
-Here, the SUIT draft manifest structure is represented:
-```
+* `sha224`
+* `sha256`
+* `sha384`
+* `sha512`
+
+The `digest-bytes` is a string of either hex- or base64-encoded bytes. The same decoding rules as those in Component ID are applied.
+
+## Example Input File
+
+```JSON
 {
-    1: 1, # Manifest Version
-    2: 2, # Manifest Sequence Number
-    5: [{   # Payloads
-        1: [b'0'],  # Component ID
-        2: 94430,
-        3: [ # COSE Digest
-            b'\xa1\x01\x18)',
-            {},
-            None,
-            b'P4\xd9\x9a\x08]\xce\xf3y\xec\xa72~P\x1b\xc2&_\x1dP\xf6\x8c\xca\x17X.\x7fJ4\x1d\xc3e'
-        ]
-    }],
-    6: [     # Installation Info reference COSE Digest
-        b'\xa1\x01\x18)',
-        {},
-        None,
-        b"\xbe\x86\xe5\xed\xac\x07\x82,\xde\x9d\x81z1\xbd\x82\xdc\xae\xe3\x98\xe6\xe4'\x87]\xbc)\xfbh\x1de\x94v"],
-    8: [     # Text Info reference COSE Digest
-        b'\xa1\x01\x18)',
-        {},
-        None,
-        b"N'\x14Y\x84y\xd8\xb6cH\x05\xdfP\x19\xef4 \xed\xff\x03)\x89J\xcc\x91\xde\x8c\x8d\xe1o\xb0\xcf"]
+    "components" : [
+        {
+            "download-id" : ["01"],
+            "install-id" : ["00"],
+            "install-digest": {
+                "algorithm-id": "sha256",
+                "digest-bytes": "00112233445566778899aabbccddeeff0123456789abcdeffedcba9876543210"
+            },
+            "install-size" : 34768,
+            "uri": "http://example.com/file.bin",
+            "vendor-id" : "fa6b4a53-d5ad-5fdf-be9d-e663e4d41ffe",
+            "class-id" : "1492af14-2569-5e48-bf42-9b2d51f2ab45",
+            "bootable" : true,
+            "install-on-download" : false,
+            "loadable" : true,
+            "decompress-on-load" : true,
+            "load-id" : ["02"],
+            "compression-info" : "gzip",
+            "load-digest" : {
+                "algorithm-id": "sha256",
+                "digest-bytes": "0011223344556677889901234567899876543210aabbccddeeffabcdeffedcba"
+            },
+        },
+        {
+            "install-id" : ["03", "01"],
+            "install-digest": {
+                "algorithm-id": "sha256",
+                "digest-bytes": "0123456789abcdeffedcba987654321000112233445566778899aabbccddeeff"
+            },
+            "install-size" : 76834,
+            "uri": "http://example.com/file2.bin"
+        }
+    ],
+    "manifest-version": 1,
+    "manifest-sequence-number": 7
 }
 ```
+
+# Invoking the suit-tool
+
+The `suit-tool` supports three sub-commands:
+
+* `create` generates a new manifest.
+* `sign` signs a manifest.
+* `parse` parses an existing manifest into cbor-debug or a json representation.
+
+The `suit-tool` has a configurable log level, specified with `-l`:
+
+* `suit-tool -l debug` verbose output
+* `suit-tool -l info` normal output
+* `suit-tool -l warning` suppress informational messages
+* `suit-tool -l exception` suppress warning and informational messages
+
+## Create
+
+To create a manifest, invoke the `suit-tool` with:
+
+```sh
+suit-tool create -i IFILE -o OFILE
+```
+
+The format of `IFILE` is as described above. `OFILE` defaults to a CBOR-encoded SUIT manifest.
+
+`-f` specifies the output format:
+
+* `suit`: CBOR-encoded SUIT manifest
+* `suit-debug`: CBOR-debug SUIT manifest
+* `json`: JSON-representation of a SUIT manifest
+
+The `suit-tool` can generate a manifest with severable fields. To enable this mode, add the `-s` flag.
+
+To add a component to the manifest from the command-line, use the following syntax:
+
+```
+-c 'FIELD1=VALUE1,FIELD2=VALUE2'
+```
+
+The supported fields are:
+
+* `file` the path fo a file to use as a payload file.
+* `inst` the `install-id`.
+* `uri` the URI where the file will be found.
+
+## Sign
+
+To sign an existing manifest, invoke the `suit-tool` with:
+
+```sh
+suit-tool sign -m MANIFEST -k PRIVKEY -o OFILE
+```
+
+`PRIVKEY` must be a secp256r1 ECC private key in PEM format.
+
+If the COSE Signature needs to indicate the key ID, add a key id with:
+
+```
+-i KEYID
+```
+
+## Parse
+
+To parse an existing manifest, invoke the `suit-tool` with:
+
+```sh
+suit-tool parse -m MANIFEST
+```
+
+If a json-representation is needed, add the '-j' flag.
