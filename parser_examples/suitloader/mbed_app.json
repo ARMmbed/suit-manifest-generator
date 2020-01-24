@@ -56,7 +56,7 @@
             "platform.use-mpu"                         : false,
             "platform.default-serial-baud-rate"        : 115200,
             "mbed-bootloader.use-kvstore-rot"          : 0,
-            "target.restrict_size"                     : "0x8000",
+            "target.restrict_size"                     : "0x8000"
         },
         "NRF52840_DK": {
             "target.static_memory_defines"     : true,

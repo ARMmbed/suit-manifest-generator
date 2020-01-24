@@ -1,13 +1,6 @@
 {
     "name": "mbed-bootloader",
     "config": {
-        "application-start-address": {
-            "help": "Address to the beginning of the active application firmware in flash",
-            "required": true
-        },
-        "application-jump-address": {
-            "help": "Jump address for running the active application firmware (if different from application-start-address)"
-        },
         "max-application-size": {
             "help": "Maximum size of the active application",
             "value": "DEFAULT_MAX_APPLICATION_SIZE"
