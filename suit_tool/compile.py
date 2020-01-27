@@ -89,7 +89,7 @@ def compile_manifest(options, m):
                     digest.update(chunk)
             c['install-digest'] = {
                 'algorithm-id' : 'sha256',
-                'digest-bytes' : digest.finalize()
+                'digest-bytes' : binascii.b2a_hex(digest.finalize())
             }
         dgst = c['install-digest']
         cid = SUITComponentId().from_json(id)
