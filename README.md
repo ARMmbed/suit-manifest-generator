@@ -1,14 +1,21 @@
 # Manifest Generator
 
-This repository contains a tool to generate manifests following the specification in https://tools.ietf.org/html/draft-ietf-suit-manifest-02.
+This repository contains a tool to generate manifests following the specification in https://tools.ietf.org/html/draft-ietf-suit-manifest-03.
 
-This repository does contain two encoding changes from draft-ietf-suit-manifest-02:
-   1. key changes: authentication wrapper key is changed from 1 to 2 and the manifest key in the outer wrapper is changed from 2 to 3
-   2. the COSE_Sign contains a SUIT Digest of the manifest.
-   
-These changes are for the reasons stated in [this post](https://mailarchive.ietf.org/arch/msg/suit/DsTWu6PDS5QuHhvK62p71mSkXdg) to the mailing list.
+# Installing
 
-It is anticipated that draft-ietf-suit-manifest-03 will adopt this change.
+First clone this repo:
+
+```
+$ git clone https://github.com/ARMmbed/suit-manifest-generator.git
+```
+
+Next, use pip to install the repo:
+
+```
+$ cd suit-manifest-generator
+$ python3 -m pip install --user --upgrade .
+```
 
 # Input File Description
 
