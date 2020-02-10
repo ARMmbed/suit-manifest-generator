@@ -319,6 +319,8 @@ class SUITComponentId(SUITManifestArray):
         newindent = indent + one_indent
         s = '[' + ''.join([v.to_debug(newindent) for v in self.items]) + ']'
         return s
+    def __hash__(self):
+        return hash(tuple([i.v for i in self.items]))
 
 class SUITComponentIndex(SUITComponentId):
     def to_suit(self):
@@ -384,6 +386,9 @@ class SUITParameters(SUITManifestDict):
         # print(j)
         return super(SUITParameters, self).from_json(j)
 
+class SUITTryEach(SUITManifestArray):
+    pass
+
 def SUITCommandContainer(jkey, skey, argtype):
     class SUITCmd(SUITCommand):
         json_key = jkey
@@ -445,7 +450,7 @@ SUITCommand.commands = [
     SUITCommandContainer('directive-set-component-index',  12, SUITPosInt),
     SUITCommandContainer('directive-set-dependency-index', 13, SUITRaw),
     SUITCommandContainer('directive-abort',                14, SUITRaw),
-    SUITCommandContainer('directive-try-each',             15, SUITRaw),
+    SUITCommandContainer('directive-try-each',             15, SUITTryEach),
     SUITCommandContainer('directive-process-dependency',   18, SUITRaw),
     SUITCommandContainer('directive-set-parameters',       19, SUITParameters),
     SUITCommandContainer('directive-override-parameters',  20, SUITParameters),
@@ -487,6 +492,8 @@ class SUITSequence(SUITManifestArray):
     def from_suit(self, s):
         self.items = [SUITCommand().from_suit(i) for i in zip(*[iter(s)]*2)]
         return self
+
+SUITTryEach.field = collections.namedtuple('ArrayElement', 'obj')(obj=SUITSequence)
 
 def SUITMakeSeverableField(c):
     class SUITSeverableField:
@@ -546,16 +553,16 @@ class COSE_CritList(SUITManifestArray):
 
 class COSE_header_map(SUITManifestDict):
     fields = SUITManifestDict.mkfields({
+        # 1: algorithm Identifier
         'alg' : ('alg', 1, COSE_Algorithms),
+        # 2: list of critical headers (criticality)
+        # 3: content type
+        # 4: key id
         'kid' : ('kid', 4, SUITBytes),
+        # 5: IV
+        # 6: partial IV
+        # 7: counter signature(s)
     })
-    # 1: algorithm Identifier
-    # 2: list of critical headers (criticality)
-    # 3: content type
-    # 4: key id
-    # 5: IV
-    # 6: partial IV
-    # 7: counter signature(s)
 
 class COSE_Sign:
     pass
@@ -599,10 +606,10 @@ class COSETagChoice(SUITManifestDict):
 
 class COSETaggedAuth(COSETagChoice):
     fields = SUITManifestDict.mkfields({
-        'cose_sign' : ('cose-sign', 98, COSE_Sign),
-        'cose_sign1' : ('cose-sign1', 18, COSE_Sign1),
-        'cose_mac' : ('cose-mac', 97, COSE_Mac),
-        'cose_mac0' : ('cose-mac0', 17, COSE_Mac0)
+        'cose_sign' : ('COSE_Sign_Tagged', 98, COSE_Sign),
+        'cose_sign1' : ('COSE_Sign1_Tagged', 18, COSE_Sign1),
+        'cose_mac' : ('COSE_Mac_Tagged', 97, COSE_Mac),
+        'cose_mac0' : ('COSE_Mac0_Tagged', 17, COSE_Mac0)
     })
 
 class COSEList(SUITManifestArray):
@@ -612,7 +619,7 @@ class COSEList(SUITManifestArray):
 
 class SUITWrapper(SUITManifestDict):
     fields = SUITManifestDict.mkfields({
-        'auth' : ('cose_auth', 2, SUITBWrapField(COSEList)),
+        'auth' : ('authentication-wrapper', 2, SUITBWrapField(COSEList)),
         'manifest' : ('manifest', 3, SUITBWrapField(SUITManifest)),
         'deres': ('dependency-resolution', 7, SUITBWrapField(SUITSequence)),
         'fetch': ('payload-fetch', 8, SUITBWrapField(SUITSequence)),

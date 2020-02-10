@@ -44,6 +44,41 @@ def runable_id(c):
         id = c['load-id']
     return id
 
+def hash_file(fname, alg):
+    imgsize = 0
+    digest = hashes.Hash(alg, backend=default_backend())
+    with open(fname, 'rb') as fd:
+        def read_in_chunks():
+            while True:
+                data = fd.read(1024)
+                if not data:
+                    break
+                yield data
+        for chunk in read_in_chunks():
+            imgsize += len(chunk)
+            digest.update(chunk)
+    return digest, imgsize
+
+
+def mkCommand(cid, name, arg):
+    return SUITCommand().from_json({
+        'component-id' : cid.to_json(),
+        'command-id' :  name,
+        'command-arg' : arg
+    })
+
+def check_eq(ids, choices):
+    eq = {}
+    neq = {}
+
+    check = lambda x: x[:-1]==x[1:]
+    get = lambda k, l: [d.get(k) for d in l]
+    eq = { k: ids[k] for k in ids if any([k in c for c in choices]) and check(get(k, choices)) }
+    check = lambda x: not x[:-1]==x[1:]
+    neq = { k: ids[k] for k in ids if any([k in c for c in choices]) and check(get(k, choices)) }
+    return eq, neq
+
+
 def compile_manifest(options, m):
     m = copy.deepcopy(m)
     m['components'] += options.components
@@ -56,9 +91,22 @@ def compile_manifest(options, m):
         ] for id in comp_ids
     ]
 
-    cids = [SUITComponentId().from_json(id) for id in ids]
-    suitCommonInfo.component_ids = cids
+    cids = set([SUITComponentId().from_json(id) for id in ids])
+    suitCommonInfo.component_ids = list(cids)
 
+    cid_data = {}
+    for c in m['components']:
+        if not 'install-id' in c:
+            LOG.critical('install-id required for all components')
+            raise Exception('No install-id')
+
+        cid = SUITComponentId().from_json(c['install-id'])
+        if not cid in cid_data:
+            cid_data[cid] = [c]
+        else:
+            cid_data[cid].append(c)
+
+    print(cid_data)
     if not any(c.get('vendor-id', None) for c in m['components']):
         LOG.critical('A vendor-id is required for at least one component')
         raise Exception('No Vendor ID')
@@ -69,52 +117,82 @@ def compile_manifest(options, m):
 
     # Construct common sequence
     CommonSeq = SUITSequence()
-    for c in m['components']:
-        if not 'install-id' in c:
-            LOG.critical('install-id required for all components')
-        id = c['install-id']
-        imgsize = c.get('install-size', 0)
-        if 'file' in c:
-            imgsize = 0
-            digest = hashes.Hash(hashes.SHA256(), backend=default_backend())
-            with open(c['file'], 'rb') as fd:
-                def read_in_chunks():
-                    while True:
-                        data = fd.read(1024)
-                        if not data:
-                            break
-                        yield data
-                for chunk in read_in_chunks():
-                    imgsize += len(chunk)
-                    digest.update(chunk)
-            c['install-digest'] = {
-                'algorithm-id' : 'sha256',
-                'digest-bytes' : binascii.b2a_hex(digest.finalize())
-            }
-        dgst = c['install-digest']
-        cid = SUITComponentId().from_json(id)
-        # TODO: Conditions
-        if 'vendor-id' in c:
-            CommonSeq.append(SUITCommand().from_json({
+    for id, choices in cid_data.items():
+        for c in choices:
+            if 'file' in c:
+                digest, imgsize = hash_file(c['file'], hashes.SHA256())
+                c['install-digest'] = {
+                    'algorithm-id' : 'sha256',
+                    'digest-bytes' : binascii.b2a_hex(digest.finalize())
+                }
+                c['install-size'] = imgsize
+
+
+
+        # if there is a choice, then we need a try-each for each item that is different.
+        eqcmds, neqcmds = check_eq({
+            'vendor-id': lambda cid, data: {
                 'component-id' : cid.to_json(),
                 'command-id' :  'condition-vendor-identifier',
-                'command-arg' : c['vendor-id']
-            }))
-
-        if 'class-id' in c:
-            CommonSeq.append(SUITCommand().from_json({
+                'command-arg' : data['vendor-id']
+            },
+            'class-id': lambda cid, data: {
                 'component-id' : cid.to_json(),
                 'command-id' :  'condition-class-identifier',
-                'command-arg' : c['class-id']
+                'command-arg' : data['class-id']
+            },
+            'offset': lambda cid, data: {
+                'component-id' : cid.to_json(),
+                'command-id' :  'condition-component-offset',
+                'command-arg' : data['offset']
+            },
+        }, choices)
+        eqparams, neqparams = check_eq({
+            'install-digest':'image-digest',
+            'install-size':'image-size',
+        }, choices)
+
+        # First, set up equal parameters.
+        params = {}
+        for param, mkey in eqparams:
+            params[mkey] = choices[0][param]
+        if len(params):
+            CommonSeq.append(SUITCommand().from_json({
+                'component-id' : cid.to_json(),
+                'command-id' :  "directive-override-parameters",
+                'command-arg' : params
             }))
-        CommonSeq.append(SUITCommand().from_json({
-            'component-id' : cid.to_json(),
-            'command-id' :  "directive-override-parameters",
-            'command-arg' : {
-                "image-digest" : dgst,
-                'image-size' : imgsize
-            }
-        }))
+
+        # First add try-each components
+        TryEachCmd = []
+        for c in choices:
+            TECseq = []
+            for item, cmd in neqcmds.items():
+                TECseq.append(cmd(cid, c))
+            params = {}
+            for param, mkey in neqparams.items():
+                params[mkey] = c[param]
+            if len(params):
+                TECseq.append({
+                    'component-id' : cid.to_json(),
+                    'command-id' : 'directive-override-parameters',
+                    'command-arg' : params
+                })
+            if len(TECseq):
+                TryEachCmd.append(TECseq)
+        print(TryEachCmd)
+        if len(TryEachCmd):
+            CommonSeq.append(SUITCommand().from_json({
+                'component-id' : cid.to_json(),
+                'command-id' : 'directive-try-each',
+                'command-arg' : TryEachCmd
+            }))
+        # Finally, and equal commands
+        for item, cmd in eqcmds.items():
+            CommonSeq.append(SUITCommand().from_json(
+                cmd(cid, choices[0])
+            ))
+
     # TODO: Dependencies
     # If there are dependencies
         # Construct dependency resolution step

@@ -33,6 +33,6 @@ def main(options):
         print (json.dumps(wrapper.to_json(),indent=2))
     else:
         print ('\n'.join(itertools.chain.from_iterable(
-            map(textwrap.wrap, wrapper.to_debug('').split('\n'))
+            [textwrap.wrap(t, 70) for t in wrapper.to_debug('').split('\n')]
         )))
     return 0
