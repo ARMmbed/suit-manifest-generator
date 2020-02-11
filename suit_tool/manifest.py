@@ -470,20 +470,20 @@ class SUITSequence(SUITManifestArray):
     field = collections.namedtuple('ArrayElement', 'obj')(obj=SUITCommand)
     def to_suit(self):
         suit_l = []
-        last_cidx = 0 if len(suitCommonInfo.component_ids) == 1 else None
+        suitCommonInfo.current_index = 0 if len(suitCommonInfo.component_ids) == 1 else None
         for i in self.items:
             # print(i.json_key, i.arg)
             if i.json_key == 'directive-set-component-index':
-                last_cidx = i.arg.v
+                suitCommonInfo.current_index = i.arg.v
             else:
                 cidx = suitCommonInfo.component_id_to_index(i.cid)
-                if cidx != last_cidx:
+                if cidx != suitCommonInfo.current_index:
                     # Change component
                     cswitch = SUITCommand().from_json({
                         'command-id' : 'directive-set-component-index',
                         'command-arg' : cidx
                     })
-                    last_cidx = cidx
+                    suitCommonInfo.current_index = cidx
                     suit_l += cswitch.to_suit()
             suit_l += i.to_suit()
         return suit_l
@@ -494,6 +494,11 @@ class SUITSequence(SUITManifestArray):
         return self
 
 SUITTryEach.field = collections.namedtuple('ArrayElement', 'obj')(obj=SUITSequence)
+
+class SUITSequenceComponentReset(SUITSequence):
+    def to_suit(self):
+        suitCommonInfo.current_index = None
+        return super(SUITSequenceComponentReset, self).to_suit()
 
 def SUITMakeSeverableField(c):
     class SUITSeverableField:
@@ -524,7 +529,7 @@ class SUITCommon(SUITManifestDict):
         # 'dependencies' : ('dependencies', 1, SUITBWrapField(SUITDependencies)),
         'components' : ('components', 2, SUITBWrapField(SUITComponents)),
         # 'dependency_components' : ('dependency-components', 3, SUITBWrapField(SUITDependencies)),
-        'common_sequence' : ('common-sequence', 4, SUITBWrapField(SUITSequence)),
+        'common_sequence' : ('common-sequence', 4, SUITBWrapField(SUITSequenceComponentReset)),
     })
 
 
@@ -533,12 +538,12 @@ class SUITManifest(SUITManifestDict):
         'version' : ('manifest-version', 1, SUITPosInt),
         'sequence' : ('manifest-sequence-number', 2, SUITPosInt),
         'common' : ('common', 3, SUITBWrapField(SUITCommon)),
-        'deres' : ('dependency-resolution', 7, SUITMakeSeverableField(SUITSequence)),
-        'fetch' : ('payload-fetch', 8, SUITMakeSeverableField(SUITSequence)),
-        'install' : ('install', 9, SUITMakeSeverableField(SUITSequence)),
-        'validate' : ('validate', 10, SUITBWrapField(SUITSequence)),
-        'load' : ('load', 11, SUITBWrapField(SUITSequence)),
-        'run' : ('run', 12, SUITBWrapField(SUITSequence)),
+        'deres' : ('dependency-resolution', 7, SUITMakeSeverableField(SUITSequenceComponentReset)),
+        'fetch' : ('payload-fetch', 8, SUITMakeSeverableField(SUITSequenceComponentReset)),
+        'install' : ('install', 9, SUITMakeSeverableField(SUITSequenceComponentReset)),
+        'validate' : ('validate', 10, SUITBWrapField(SUITSequenceComponentReset)),
+        'load' : ('load', 11, SUITBWrapField(SUITSequenceComponentReset)),
+        'run' : ('run', 12, SUITBWrapField(SUITSequenceComponentReset)),
     })
 
 class COSE_Algorithms(SUITKeyMap):
