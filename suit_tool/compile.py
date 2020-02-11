@@ -83,17 +83,13 @@ def compile_manifest(options, m):
     m = copy.deepcopy(m)
     m['components'] += options.components
     # Compile list of All Component IDs
-    ids = [
-        id for comp_ids in [
+    ids = set([
+        SUITComponentId().from_json(id) for comp_ids in [
             [c[f] for f in [
                 'install-id', 'download-id', 'load-id'
             ] if f in c] for c in m['components']
         ] for id in comp_ids
-    ]
-
-    cids = set([SUITComponentId().from_json(id) for id in ids])
-    suitCommonInfo.component_ids = list(cids)
-
+    ])
     cid_data = {}
     for c in m['components']:
         if not 'install-id' in c:
@@ -106,7 +102,6 @@ def compile_manifest(options, m):
         else:
             cid_data[cid].append(c)
 
-    print(cid_data)
     if not any(c.get('vendor-id', None) for c in m['components']):
         LOG.critical('A vendor-id is required for at least one component')
         raise Exception('No Vendor ID')
@@ -180,7 +175,6 @@ def compile_manifest(options, m):
                 })
             if len(TECseq):
                 TryEachCmd.append(TECseq)
-        print(TryEachCmd)
         if len(TryEachCmd):
             CommonSeq.append(SUITCommand().from_json({
                 'component-id' : cid.to_json(),
@@ -344,9 +338,8 @@ def compile_manifest(options, m):
                 #
                 # )
     #TODO: Text
-
     common = SUITCommon().from_json({
-        'components': ids,
+        'components': [id.to_json() for id in ids],
         'common-sequence': CommonSeq.to_json(),
     })
 
