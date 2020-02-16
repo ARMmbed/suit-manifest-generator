@@ -69,7 +69,7 @@ def main(options):
     cose_signature.signature = SUITBytes().from_suit(signature_bytes)
 
     auth = SUITBWrapField(COSEList)().from_json([{
-        'cose-sign1' : cose_signature.to_json()
+        'COSE_Sign1_Tagged' : cose_signature.to_json()
     }])
 
     wrapper[SUITWrapper.fields['auth'].suit_key] = auth.to_suit()

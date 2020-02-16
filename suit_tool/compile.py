@@ -34,7 +34,7 @@ from cryptography.hazmat.primitives import hashes
 
 from suit_tool.manifest import SUITComponentId, SUITCommon, SUITSequence, \
                      suitCommonInfo, SUITCommand, SUITManifest, \
-                     SUITWrapper
+                     SUITWrapper, SUITTryEach
 
 LOG = logging.getLogger(__name__)
 
@@ -44,20 +44,113 @@ def runable_id(c):
         id = c['load-id']
     return id
 
+def hash_file(fname, alg):
+    imgsize = 0
+    digest = hashes.Hash(alg, backend=default_backend())
+    with open(fname, 'rb') as fd:
+        def read_in_chunks():
+            while True:
+                data = fd.read(1024)
+                if not data:
+                    break
+                yield data
+        for chunk in read_in_chunks():
+            imgsize += len(chunk)
+            digest.update(chunk)
+    return digest, imgsize
+
+
+def mkCommand(cid, name, arg):
+    if hasattr(arg, 'to_json'):
+        jarg = arg.to_json()
+    else:
+        jarg = arg
+    return SUITCommand().from_json({
+        'component-id' : cid.to_json(),
+        'command-id' :  name,
+        'command-arg' : jarg
+    })
+
+def check_eq(ids, choices):
+    eq = {}
+    neq = {}
+
+    check = lambda x: x[:-1]==x[1:]
+    get = lambda k, l: [d.get(k) for d in l]
+    eq = { k: ids[k] for k in ids if any([k in c for c in choices]) and check(get(k, choices)) }
+    check = lambda x: not x[:-1]==x[1:]
+    neq = { k: ids[k] for k in ids if any([k in c for c in choices]) and check(get(k, choices)) }
+    return eq, neq
+
+
+def make_sequence(cid, choices, seq, params, cmds, pcid_key=None, param_drctv='directive-set-parameters'):
+    eqcmds, neqcmds = check_eq(cmds, choices)
+    eqparams, neqparams = check_eq(params, choices)
+    if not pcid_key:
+        pcid = cid
+    else:
+        pcid = SUITComponentId().from_json(choices[0][pcid_key])
+    params = {}
+    for param, pcmd in eqparams.items():
+        k,v = pcmd(pcid, choices[0])
+        params[k] = v
+    if len(params):
+        seq.append(mkCommand(pcid, param_drctv, params))
+    TryEachCmd = SUITTryEach()
+    for c in choices:
+        TECseq = SUITSequence()
+        for item, cmd in neqcmds.items():
+            TECseq.append(cmd(cid, c))
+        params = {}
+        for param, pcmd in neqparams.items():
+            k,v = pcmd(cid, c)
+            params[k] = v
+        print (params)
+        if len(params):
+            TECseq.append(mkCommand(pcid, param_drctv, params))
+        if len(TECseq.items):
+            TryEachCmd.append(TECseq)
+    if len(TryEachCmd.items):
+        print(TryEachCmd)
+        seq.append(mkCommand(cid, 'directive-try-each', TryEachCmd))
+    # Finally, and equal commands
+    for item, cmd in eqcmds.items():
+        print(cmd)
+        seq.append(cmd(cid, choices[0]))
+    return seq
+
 def compile_manifest(options, m):
     m = copy.deepcopy(m)
     m['components'] += options.components
     # Compile list of All Component IDs
-    ids = [
-        id for comp_ids in [
+    ids = set([
+        SUITComponentId().from_json(id) for comp_ids in [
             [c[f] for f in [
                 'install-id', 'download-id', 'load-id'
             ] if f in c] for c in m['components']
         ] for id in comp_ids
-    ]
+    ])
+    cid_data = {}
+    for c in m['components']:
+        if not 'install-id' in c:
+            LOG.critical('install-id required for all components')
+            raise Exception('No install-id')
 
-    cids = [SUITComponentId().from_json(id) for id in ids]
-    suitCommonInfo.component_ids = cids
+        cid = SUITComponentId().from_json(c['install-id'])
+        if not cid in cid_data:
+            cid_data[cid] = [c]
+        else:
+            cid_data[cid].append(c)
+
+    for id, choices in cid_data.items():
+        for c in choices:
+            if 'file' in c:
+                digest, imgsize = hash_file(c['file'], hashes.SHA256())
+                c['install-digest'] = {
+                    'algorithm-id' : 'sha256',
+                    'digest-bytes' : binascii.b2a_hex(digest.finalize())
+                }
+                c['install-size'] = imgsize
 
     if not any(c.get('vendor-id', None) for c in m['components']):
         LOG.critical('A vendor-id is required for at least one component')
@@ -68,185 +161,101 @@ def compile_manifest(options, m):
         raise Exception('No Class ID')
 
     # Construct common sequence
+    CommonCmds = {
+        'offset': lambda cid, data: mkCommand(cid, 'condition-component-offset', data['offset'])
+    }
+    CommonParams = {
+        'install-digest': lambda cid, data: ('image-digest', data['install-digest']),
+        'install-size': lambda cid, data: ('image-size', data['install-size']),
+    }
     CommonSeq = SUITSequence()
-    for c in m['components']:
-        if not 'install-id' in c:
-            LOG.critical('install-id required for all components')
-        id = c['install-id']
-        imgsize = c.get('install-size', 0)
-        if 'file' in c:
-            imgsize = 0
-            digest = hashes.Hash(hashes.SHA256(), backend=default_backend())
-            with open(c['file'], 'rb') as fd:
-                def read_in_chunks():
-                    while True:
-                        data = fd.read(1024)
-                        if not data:
-                            break
-                        yield data
-                for chunk in read_in_chunks():
-                    imgsize += len(chunk)
-                    digest.update(chunk)
-            c['install-digest'] = {
-                'algorithm-id' : 'sha256',
-                'digest-bytes' : binascii.b2a_hex(digest.finalize())
-            }
-        dgst = c['install-digest']
-        cid = SUITComponentId().from_json(id)
-        # TODO: Conditions
-        if 'vendor-id' in c:
-            CommonSeq.append(SUITCommand().from_json({
-                'component-id' : cid.to_json(),
-                'command-id' :  'condition-vendor-identifier',
-                'command-arg' : c['vendor-id']
-            }))
+    for cid, choices in cid_data.items():
+        if any(['vendor-id' in c for c in choices]):
+            CommonSeq.append(mkCommand(cid, 'condition-vendor-identifier',
+                [c['vendor-id'] for c in choices if 'vendor-id' in c][0]))
+        if any(['vendor-id' in c for c in choices]):
+            CommonSeq.append(mkCommand(cid, 'condition-class-identifier',
+                [c['class-id'] for c in choices if 'class-id' in c][0]))
+        CommonSeq = make_sequence(cid, choices, CommonSeq, CommonParams,
+            CommonCmds, param_drctv='directive-override-parameters')
 
-        if 'class-id' in c:
-            CommonSeq.append(SUITCommand().from_json({
-                'component-id' : cid.to_json(),
-                'command-id' :  'condition-class-identifier',
-                'command-arg' : c['class-id']
-            }))
-        CommonSeq.append(SUITCommand().from_json({
-            'component-id' : cid.to_json(),
-            'command-id' :  "directive-override-parameters",
-            'command-arg' : {
-                "image-digest" : dgst,
-                'image-size' : imgsize
+    InstSeq = SUITSequence()
+    FetchSeq = SUITSequence()
+    for cid, choices in cid_data.items():
+        if any([c.get('install-on-download', True) and 'uri' in c for c in choices]):
+            InstParams = {
+                'uri' : lambda cid, data: ('uri', data['uri']),
             }
-        }))
+            if any(['compression-info' in c and not c.get('decompress-on-load', False) for c in choices]):
+                InstParams['compression-info'] = lambda cid, data: data.get('compression-info')
+            InstCmds = {
+                'offset': lambda cid, data: mkCommand(
+                    cid, 'condition-component-offset', data['offset'])
+            }
+            InstSeq = make_sequence(cid, choices, InstSeq, InstParams, InstCmds)
+            InstSeq.append(mkCommand(cid, 'directive-fetch', None))
+            InstSeq.append(mkCommand(cid, 'condition-image-match', None))
+
+        elif any(['uri' in c for c in choices]):
+            FetchParams = {
+                'uri' : lambda cid, data: ('uri', data['uri']),
+                'download-digest' : lambda cid, data : (
+                    'image-digest', data.get('download-digest', data['install-digest']))
+            }
+            if any(['compression-info' in c and not c.get('decompress-on-load', False) for c in choices]):
+                FetchParams['compression-info'] = lambda cid, data: data.get('compression-info')
+
+            FetchCmds = {
+                'offset': lambda cid, data: mkCommand(
+                    cid, 'condition-component-offset', data['offset']),
+                'fetch' : lambda cid, data: mkCommand(
+                    data.get('download-id', cid.to_json()), 'directive-fetch', None),
+                'match' : lambda cid, data: mkCommand(
+                    data.get('download-id', cid.to_json()), 'condition-image-match', None)
+            }
+            FetchSeq = make_sequence(cid, choices, FetchSeq, FetchParams, FetchCmds, 'download-id')
+
+            InstParams = {
+                'download-id' : lambda cid, data : ('source-component', data['download-id'])
+            }
+            InstCmds = {
+            }
+            InstSeq = make_sequence(cid, choices, InstSeq, InstParams, InstCmds)
+            InstSeq.append(mkCommand(cid, 'directive-copy', None))
+            InstSeq.append(mkCommand(cid, 'condition-image-match', None))
+
     # TODO: Dependencies
     # If there are dependencies
         # Construct dependency resolution step
-    InstSeq = SUITSequence()
-    FetchSeq = SUITSequence()
-    # Construct Installation step
-    for c in m['components']:
-        # If install-on-download is true
-        if c.get('install-on-download', True) and 'uri' in c:
-            cid = SUITComponentId().from_json(c['install-id'])
-            params = {'uri' : c['uri']}
-            if 'compression-info' in c and not c.get('decompress-on-load', False):
-                params['compression-info'] = c['compression-info']
-            InstSeq.append(SUITCommand().from_json({
-                'component-id' : cid.to_json(),
-                'command-id' : 'directive-set-parameters',
-                'command-arg' : params
-            }))
-            # Download each component
-            InstSeq.append(SUITCommand().from_json({
-                'component-id' : cid.to_json(),
-                'command-id' : 'directive-fetch',
-                'command-arg' : None
-            }))
-            InstSeq.append(SUITCommand().from_json({
-                'component-id' : cid.to_json(),
-                'command-id' : 'condition-image-match',
-                'command-arg' : None
-            }))
-
-
-        # Else
-        else:
-            if 'uri' in c:
-                dldigest = c.get('download-digest', c['install-digest'])
-                params = {
-                    'uri' : c['uri'],
-                    'image-digest' : dldigest
-                }
-                if 'compression-info' in c and not c.get('decompress-on-load', False):
-                    params['compression-info'] = c['compression-info']
-
-                cid = SUITComponentId().from_json(c['download-id'])
-                # Set URI
-                FetchSeq.append(SUITCommand().from_json({
-                    'component-id' : cid.to_json(),
-                    'command-id' : 'directive-set-parameters',
-                    'command-arg' : params
-                }))
-                # Download component
-                FetchSeq.append(SUITCommand().from_json({
-                    'component-id' : cid.to_json(),
-                    'command-id' : 'directive-fetch',
-                    'command-arg' : None
-                }))
-                # Check digest
-                FetchSeq.append(SUITCommand().from_json({
-                    'component-id' : cid.to_json(),
-                    'command-id' : 'condition-image-match',
-                    'command-arg' : None
-                }))
-                instid = SUITComponentId().from_json(c['install-id'])
-                dlid = SUITComponentId().from_json(c['download-id'])
-
-                # Setup the source component
-                InstSeq.append(SUITCommand().from_json({
-                    'component-id' : instid.to_json(),
-                    'command-id' : 'directive-set-parameters',
-                    'command-arg' : {'source-component' : dlid.to_json()}
-                }))
-
-                # Move each component from download to install
-                InstSeq.append(SUITCommand().from_json({
-                    'component-id' : instid.to_json(),
-                    'command-id' : 'directive-copy',
-                    'command-arg' : None
-                }))
-
-                # Verify each component's install digest
-                InstSeq.append(SUITCommand().from_json({
-                    'component-id' : cid.to_json(),
-                    'command-id' : 'condition-image-match',
-                    'command-arg' : None
-                }))
-
 
     ValidateSeq = SUITSequence()
     RunSeq = SUITSequence()
     LoadSeq = SUITSequence()
     # If any component is marked bootable
-    if any(c.get('bootable', False) for c in m['components']):
-        # Construct system validation
-        for c in m['components']:
-            cid = SUITComponentId().from_json(c['install-id'])
-            # Verify component
-            ValidateSeq.append(SUITCommand().from_json({
-                'component-id' : cid.to_json(),
-                'command-id' : 'condition-image-match',
-                'command-arg' : None
-            }))
+    for cid, choices in cid_data.items():
+        if any([c.get('bootable', False) for c in choices]):
+            # TODO: Dependencies
             # If there are dependencies
                 # Verify dependencies
                 # Process dependencies
-        # Generate image load section
-        for c in m['components']:
-            if c.get('loadable', False):
+            ValidateSeq.append(mkCommand(cid, 'condition-image-match', None))
+
+        if any(['loadable' in c for c in choices]):
+            # Generate image load section
+            LoadParams = {
+                'install-id' : lambda cid, data : ('source-component', c['install-id']),
+                'load-digest' : ('image-digest', c.get('load-digest', c['install-digest'])),
+                'load-size' : ('image-size', c.get('load-size', c['install-size']))
+            }
+            if 'compression-info' in c and c.get('decompress-on-load', False):
+                LoadParams['compression-info'] = lambda cid, data: ('compression-info', c['compression-info'])
+            LoadCmds = {
                 # Move each loadable component
-                loadparams = {
-                    'source-component' : c['install-id'],
-                    'image-digest' : c.get('load-digest', c['install-digest']),
-                    'image-size' : c.get('load-size', c['install-size'])
-                }
-                if 'compression-info' in c and c.get('decompress-on-load', False):
-                    loadparams['compression-info'] = c['compression-info']
-
-                LoadSeq.append(SUITCommand().from_json({
-                    'component-id' : c['load-id'],
-                    'command-id' : 'directive-override-parameters',
-                    'command-arg' : loadparams
-                }))
-                LoadSeq.append(SUITCommand().from_json({
-                    'component-id' : c['load-id'],
-                    'command-id' : 'directive-copy',
-                    'command-arg' : None
-                }))
-                # Verify each modifiable comopnent
-                LoadSeq.append(SUITCommand().from_json({
-                    'component-id' : c['load-id'],
-                    'command-id' : 'condition-image-match',
-                    'command-arg' : None
-                }))
-
+            }
+            load_id = SUITComponentId().from_json(choices[0]['load-id'])
+            LoadSeq = make_sequence(load_id, choices, ValidateSeq, LoadParams, LoadCmds)
+            LoadSeq.append(mkCommand(load_id, 'directive-copy', None))
+            LoadSeq.append(mkCommand(load_id, 'condition-image-match', None))
 
         # Generate image invocation section
         bootable_components = [x for x in m['components'] if x.get('bootable')]
@@ -266,9 +275,8 @@ def compile_manifest(options, m):
                 #
                 # )
     #TODO: Text
-
     common = SUITCommon().from_json({
-        'components': ids,
+        'components': [id.to_json() for id in ids],
         'common-sequence': CommonSeq.to_json(),
     })
 
