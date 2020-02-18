@@ -20,7 +20,7 @@
 import logging, sys
 
 from suit_tool.argparser import MainArgumentParser
-from suit_tool import create, sign, parse, get_uecc_pubkey #, verify, cert, init
+from suit_tool import create, sign, parse, get_uecc_pubkey, keygen #, verify, cert, init
 # from suit_tool import update
 import colorama
 colorama.init()
@@ -62,7 +62,8 @@ class CLIDriver(object):
           # "init": init.main,
           # "update" : update.main,
           "pubkey": get_uecc_pubkey.main,
-          "sign": sign.main
+          "sign": sign.main,
+          "keygen": keygen.main,
         }[self.options.action](self.options) or 0
 
         sys.exit(rc)

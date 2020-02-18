@@ -75,6 +75,12 @@ class MainArgumentParser(object):
 
         get_uecc_pubkey_parser.add_argument('-k', '--private-key', metavar='FILE', type=argparse.FileType('rb'), required=True)
 
+        keygen_parser = subparsers.add_parser('keygen', help='Create a signing key. Not for production use')
+
+        keygen_parser.add_argument('-t', '--type', metavar='TYPE', choices=['secp256r1', 'secp384r1', 'secp521r1', 'ed25519'],
+            default='secp256r1', help='The type of the key to generate')
+        keygen_parser.add_argument('-o', '--output-file', metavar='FILE', type=argparse.FileType('wb'), required=True)
+
         return parser
 
 
