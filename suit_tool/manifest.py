@@ -551,6 +551,8 @@ class COSE_Algorithms(SUITKeyMap):
         'ES256' : -7,
         'ES384' : -35,
         'ES512' : -36,
+        'EdDSA' : -8,
+        'HSS-LMS' : -46,
     })
 
 class COSE_CritList(SUITManifestArray):
