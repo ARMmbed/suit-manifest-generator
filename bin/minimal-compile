@@ -1,0 +1,57 @@
+#!/usr/bin/python3
+# -*- coding: utf-8 -*-
+# ----------------------------------------------------------------------------
+# Copyright 2016-2019 ARM Limited or its affiliates
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ----------------------------------------------------------------------------
+
+import sys
+import os
+import cbor
+suittoolPath = os.path.join(os.path.dirname(os.path.realpath(__file__)),'..')
+sys.path.insert(0,suittoolPath)
+from suit_tool.compile import compile_manifest
+
+ex0 = {
+    "components" : [
+        {
+            "install-id" : ["00"],
+            "bootable" : True,
+            "install-digest": {
+                "algorithm-id": "sha256",
+                "digest-bytes": "00112233445566778899aabbccddeeff0123456789abcdeffedcba9876543210"
+            },
+            "vendor-id" : "fa6b4a53-d5ad-5fdf-be9d-e663e4d41ffe",
+            "class-id" : "1492af14-2569-5e48-bf42-9b2d51f2ab45",
+            "install-size" : 34768
+        }
+    ],
+    "manifest-version": 1,
+    "manifest-sequence-number": 1
+}
+class Emptyopts:
+    def __init__(self):
+        self.components = []
+    
+
+def main():
+
+  nm = compile_manifest(Emptyopts(), ex0)
+  with open('test.out', 'wb') as fd:
+    fd.write(cbor.dumps(nm.to_suit(), sort_keys=True))
+
+if __name__ == "__main__":
+  sys.exit(main())
