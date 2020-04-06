@@ -174,32 +174,18 @@ int do_cose_auth(
     }
     // Digest the signed object:
     //    Sig_structure = [
-    //        context : "Signature"                      ; Const
+    //        context : "Signature1"                     ; Const
     //        body_protected : empty_or_serialized_map,  ; Included in auth buffer
     //        external_aad : bstr,                       ; NULL
     //        payload : bstr                             ; Included in manifest
     //    ]
-    // body_protected is a digest between 224 and 512 bits
+    // payload is a digest between 224 and 512 bits
     // There should be an array wrapper (1B) and a type identifier (1B)
 
-    size_t struct_len =
-        sizeof(COSE_Sign1_context) - 1 +
-        (values[0].ref.length + values[0].ref.ptr - values[0].cbor_start) +
-        1 +
-        (values[2].ref.length + values[2].ref.ptr - values[2].cbor_start);
-    uint8_t bstr_start[1+sizeof(size_t)];
-
-    size_t byte_size = sizeof(size_t) - __builtin_clz(struct_len)/8;
-    size_t byte_size_log = sizeof(size_t)*8 - __builtin_clz(byte_size);
-    bstr_start[0] = CBOR_TYPE_BSTR + byte_size_log + 23;
-    for (size_t n = byte_size; n; n--) {
-        bstr_start[byte_size - (n - 1)] = (struct_len >> ((n - 1)<<3));
-    }
     mbedtls_sha256_context ctx;
     uint8_t hash[32];
     mbedtls_sha256_init (&ctx);
     mbedtls_sha256_starts_ret (&ctx, 0);
-    mbedtls_sha256_update_ret(&ctx, bstr_start, 1 + byte_size);
     mbedtls_sha256_update_ret(&ctx, COSE_Sign1_context, sizeof(COSE_Sign1_context) - 1);
     mbedtls_sha256_update_ret(&ctx, values[0].cbor_start, values[0].ref.length + values[0].ref.ptr - values[0].cbor_start);
     mbedtls_sha256_update_ret(&ctx, (uint8_t *)"\x40", 1);
