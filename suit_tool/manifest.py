@@ -376,11 +376,13 @@ class SUITCompressionInfo(SUITKeyMap):
 
 class SUITParameters(SUITManifestDict):
     fields = SUITManifestDict.mkfields({
-        'digest' : ('image-digest', 11, SUITDigest),
-        'size' : ('image-size', 12, SUITPosInt),
-        'uri' : ('uri', 6, SUITTStr),
-        'src' : ('source-component', 10, SUITComponentIndex),
-        'compress' : ('compression-info', 8, SUITCompressionInfo)
+        'vendor-id' : ('vendor-id', 1, SUITUUID),
+        'class-id' : ('class-id', 2, SUITUUID),
+        'digest' : ('image-digest', 3, SUITDigest),
+        'size' : ('image-size', 14, SUITPosInt),
+        'uri' : ('uri', 21, SUITTStr),
+        'src' : ('source-component', 22, SUITComponentIndex),
+        'compress' : ('compression-info', 19, SUITCompressionInfo)
     })
     def from_json(self, j):
         # print(j)
@@ -436,31 +438,30 @@ class SUITCommand:
         return self.scommands[s[0]]().from_suit(s)
 
 SUITCommand.commands = [
-    SUITCommandContainer('condition-vendor-identifier',    1,  SUITUUID),
-    SUITCommandContainer('condition-class-identifier',     2,  SUITUUID),
+    SUITCommandContainer('condition-vendor-identifier',    1,  SUITNil),
+    SUITCommandContainer('condition-class-identifier',     2,  SUITNil),
     SUITCommandContainer('condition-image-match',          3,  SUITNil),
-    SUITCommandContainer('condition-use-before',           4,  SUITRaw),
-    SUITCommandContainer('condition-component-offset',     5,  SUITRaw),
-    SUITCommandContainer('condition-custom',               6,  SUITRaw),
-    SUITCommandContainer('condition-device-identifier',    24, SUITRaw),
-    SUITCommandContainer('condition-image-not-match',      25, SUITRaw),
-    SUITCommandContainer('condition-minimum-battery',      26, SUITRaw),
-    SUITCommandContainer('condition-update-authorised',    27, SUITRaw),
-    SUITCommandContainer('condition-version',              28, SUITRaw),
+    SUITCommandContainer('condition-use-before',           4,  SUITNil),
+    SUITCommandContainer('condition-component-offset',     5,  SUITNil),
+    SUITCommandContainer('condition-device-identifier',    24, SUITNil),
+    SUITCommandContainer('condition-image-not-match',      25, SUITNil),
+    SUITCommandContainer('condition-minimum-battery',      26, SUITNil),
+    SUITCommandContainer('condition-update-authorised',    27, SUITNil),
+    SUITCommandContainer('condition-version',              28, SUITNil),
     SUITCommandContainer('directive-set-component-index',  12, SUITPosInt),
-    SUITCommandContainer('directive-set-dependency-index', 13, SUITRaw),
-    SUITCommandContainer('directive-abort',                14, SUITRaw),
+    SUITCommandContainer('directive-set-dependency-index', 13, SUITPosInt),
+    SUITCommandContainer('directive-abort',                14, SUITNil),
     SUITCommandContainer('directive-try-each',             15, SUITTryEach),
-    SUITCommandContainer('directive-process-dependency',   18, SUITRaw),
+    SUITCommandContainer('directive-process-dependency',   18, SUITNil),
     SUITCommandContainer('directive-set-parameters',       19, SUITParameters),
     SUITCommandContainer('directive-override-parameters',  20, SUITParameters),
     SUITCommandContainer('directive-fetch',                21, SUITNil),
-    SUITCommandContainer('directive-copy',                 22, SUITRaw),
-    SUITCommandContainer('directive-run',                  23, SUITRaw),
-    SUITCommandContainer('directive-wait',                 29, SUITRaw),
+    SUITCommandContainer('directive-copy',                 22, SUITNil),
+    SUITCommandContainer('directive-run',                  23, SUITNil),
+    SUITCommandContainer('directive-wait',                 29, SUITNil),
     SUITCommandContainer('directive-run-sequence',         30, SUITRaw),
     SUITCommandContainer('directive-run-with-arguments',   31, SUITRaw),
-    SUITCommandContainer('directive-swap',                 32, SUITRaw),
+    SUITCommandContainer('directive-swap',                 32, SUITNil),
 ]
 SUITCommand.jcommands = { c.json_key : c for c in SUITCommand.commands}
 SUITCommand.scommands = { c.suit_key : c for c in SUITCommand.commands}
@@ -493,7 +494,7 @@ class SUITSequence(SUITManifestArray):
         self.items = [SUITCommand().from_suit(i) for i in zip(*[iter(s)]*2)]
         return self
 
-SUITTryEach.field = collections.namedtuple('ArrayElement', 'obj')(obj=SUITSequence)
+SUITTryEach.field = collections.namedtuple('ArrayElement', 'obj')(obj=SUITBWrapField(SUITSequence))
 
 class SUITSequenceComponentReset(SUITSequence):
     def to_suit(self):
@@ -620,7 +621,7 @@ class COSETaggedAuth(COSETagChoice):
     })
 
 class COSEList(SUITManifestArray):
-    field = collections.namedtuple('ArrayElement', 'obj')(obj=COSETaggedAuth)
+    field = collections.namedtuple('ArrayElement', 'obj')(obj=SUITBWrapField(COSETaggedAuth))
     def from_suit(self, data):
         return super(COSEList, self).from_suit(data)
 

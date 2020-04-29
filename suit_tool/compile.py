@@ -34,7 +34,7 @@ from cryptography.hazmat.primitives import hashes
 
 from suit_tool.manifest import SUITComponentId, SUITCommon, SUITSequence, \
                      suitCommonInfo, SUITCommand, SUITManifest, \
-                     SUITWrapper, SUITTryEach
+                     SUITWrapper, SUITTryEach, SUITBWrapField
 
 LOG = logging.getLogger(__name__)
 
@@ -98,17 +98,17 @@ def make_sequence(cid, choices, seq, params, cmds, pcid_key=None, param_drctv='d
         seq.append(mkCommand(pcid, param_drctv, params))
     TryEachCmd = SUITTryEach()
     for c in choices:
-        TECseq = SUITSequence()
+        TECseq = TryEachCmd.field.obj().from_json([])
         for item, cmd in neqcmds.items():
-            TECseq.append(cmd(cid, c))
+            TECseq.v.append(cmd(cid, c))
         params = {}
         for param, pcmd in neqparams.items():
             k,v = pcmd(cid, c)
             params[k] = v
         print (params)
         if len(params):
-            TECseq.append(mkCommand(pcid, param_drctv, params))
-        if len(TECseq.items):
+            TECseq.v.append(mkCommand(pcid, param_drctv, params))
+        if hasattr(TECseq, "v") and len(TECseq.v.items):
             TryEachCmd.append(TECseq)
     if len(TryEachCmd.items):
         print(TryEachCmd)
@@ -162,20 +162,19 @@ def compile_manifest(options, m):
 
     # Construct common sequence
     CommonCmds = {
-        'offset': lambda cid, data: mkCommand(cid, 'condition-component-offset', data['offset'])
+        'offset': lambda cid, data: mkCommand(cid, 'condition-component-offset', None),
+        'vendor-id': lambda cid, data: mkCommand(cid, 'condition-vendor-identifier', None),
+        'class-id': lambda cid, data: mkCommand(cid, 'condition-class-identifier', None),
     }
     CommonParams = {
         'install-digest': lambda cid, data: ('image-digest', data['install-digest']),
         'install-size': lambda cid, data: ('image-size', data['install-size']),
+        'vendor-id' : lambda cid, data: ('vendor-id', data['vendor-id']),
+        'class-id' : lambda cid, data: ('class-id', data['class-id']),
+        'offset' : lambda cid, data: ('offset', data['offset'])
     }
     CommonSeq = SUITSequence()
     for cid, choices in cid_data.items():
-        if any(['vendor-id' in c for c in choices]):
-            CommonSeq.append(mkCommand(cid, 'condition-vendor-identifier',
-                [c['vendor-id'] for c in choices if 'vendor-id' in c][0]))
-        if any(['vendor-id' in c for c in choices]):
-            CommonSeq.append(mkCommand(cid, 'condition-class-identifier',
-                [c['class-id'] for c in choices if 'class-id' in c][0]))
         CommonSeq = make_sequence(cid, choices, CommonSeq, CommonParams,
             CommonCmds, param_drctv='directive-override-parameters')
 
@@ -190,7 +189,7 @@ def compile_manifest(options, m):
                 InstParams['compression-info'] = lambda cid, data: data.get('compression-info')
             InstCmds = {
                 'offset': lambda cid, data: mkCommand(
-                    cid, 'condition-component-offset', data['offset'])
+                    cid, 'condition-component-offset', None)
             }
             InstSeq = make_sequence(cid, choices, InstSeq, InstParams, InstCmds)
             InstSeq.append(mkCommand(cid, 'directive-fetch', None))
@@ -233,12 +232,19 @@ def compile_manifest(options, m):
     LoadSeq = SUITSequence()
     # If any component is marked bootable
     for cid, choices in cid_data.items():
-        if any([c.get('bootable', False) for c in choices]):
-            # TODO: Dependencies
-            # If there are dependencies
-                # Verify dependencies
-                # Process dependencies
-            ValidateSeq.append(mkCommand(cid, 'condition-image-match', None))
+        ValidateCmds = {
+            # 'install-digest' : lambda cid, data : mkCommand(cid, 'condition-image-match', None)
+        }
+        ValidateParams = {
+        }
+        ValidateSeq = make_sequence(cid, choices, ValidateSeq, ValidateParams, ValidateCmds)
+        ValidateSeq.append(mkCommand(cid, 'condition-image-match', None))
+        # if any([c.get('bootable', False) for c in choices]):
+        # TODO: Dependencies
+        # If there are dependencies
+            # Verify dependencies
+            # Process dependencies
+
 
         if any(['loadable' in c for c in choices]):
             # Generate image load section
@@ -253,7 +259,7 @@ def compile_manifest(options, m):
                 # Move each loadable component
             }
             load_id = SUITComponentId().from_json(choices[0]['load-id'])
-            LoadSeq = make_sequence(load_id, choices, ValidateSeq, LoadParams, LoadCmds)
+            LoadSeq = make_sequence(load_id, choices, LoadSeq, LoadParams, LoadCmds)
             LoadSeq.append(mkCommand(load_id, 'directive-copy', None))
             LoadSeq.append(mkCommand(load_id, 'condition-image-match', None))
 
