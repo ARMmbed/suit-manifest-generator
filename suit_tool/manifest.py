@@ -348,7 +348,7 @@ class SUITComponents(SUITManifestArray):
 
     def from_json(self, j):
         super(SUITComponents, self).from_json(j)
-        suitCommonInfo.component_ids = self.items
+        suitCommonInfo.component_ids = sorted(self.items, key=lambda item: item.items[0].v)
         return self
 
 class SUITDigestAlgo(SUITKeyMap):
