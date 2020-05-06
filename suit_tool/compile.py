@@ -185,8 +185,6 @@ def compile_manifest(options, m):
             InstParams = {
                 'uri' : lambda cid, data: ('uri', data['uri']),
             }
-            if any(['compression-info' in c and not c.get('decompress-on-load', False) for c in choices]):
-                InstParams['compression-info'] = lambda cid, data: data.get('compression-info')
             InstCmds = {
                 'offset': lambda cid, data: mkCommand(
                     cid, 'condition-component-offset', None)
@@ -201,8 +199,6 @@ def compile_manifest(options, m):
                 'download-digest' : lambda cid, data : (
                     'image-digest', data.get('download-digest', data['install-digest']))
             }
-            if any(['compression-info' in c and not c.get('decompress-on-load', False) for c in choices]):
-                FetchParams['compression-info'] = lambda cid, data: data.get('compression-info')
 
             FetchCmds = {
                 'offset': lambda cid, data: mkCommand(
@@ -249,19 +245,16 @@ def compile_manifest(options, m):
         if any(['loadable' in c for c in choices]):
             # Generate image load section
             LoadParams = {
-                'install-id' : lambda cid, data : ('source-component', c['install-id']),
-                'load-digest' : ('image-digest', c.get('load-digest', c['install-digest'])),
-                'load-size' : ('image-size', c.get('load-size', c['install-size']))
+                'install-id': lambda cid, data: ('source-component', data['install-id'])
             }
             if 'compression-info' in c and c.get('decompress-on-load', False):
-                LoadParams['compression-info'] = lambda cid, data: ('compression-info', c['compression-info'])
+                LoadParams['compression-info'] = lambda cid, data: ('compression', data['compression-info'])
             LoadCmds = {
                 # Move each loadable component
             }
-            load_id = SUITComponentId().from_json(choices[0]['load-id'])
-            LoadSeq = make_sequence(load_id, choices, LoadSeq, LoadParams, LoadCmds)
-            LoadSeq.append(mkCommand(load_id, 'directive-copy', None))
-            LoadSeq.append(mkCommand(load_id, 'condition-image-match', None))
+            LoadSeq = make_sequence(cid, choices, LoadSeq, LoadParams, LoadCmds)
+            LoadSeq.append(mkCommand(cid, 'directive-copy', None))
+            LoadSeq.append(mkCommand(cid, 'condition-image-match', None))
 
         # Generate image invocation section
         bootable_components = [x for x in m['components'] if x.get('bootable')]

@@ -365,13 +365,18 @@ class SUITDigest(SUITManifestNamedList):
         'digest' : ('digest-bytes', 1, SUITBytes)
     })
 
-class SUITCompressionInfo(SUITKeyMap):
+class SUITCompressionAlgorithm(SUITKeyMap):
     rkeymap, keymap = SUITKeyMap.mkKeyMaps({
         'gzip' : 1,
         'bzip2' : 2,
         'deflate' : 3,
         'lz4' : 4,
         'lzma' : 7
+    })
+
+class SUITCompressionInfo(SUITManifestDict):
+    fields = SUITManifestDict.mkfields({
+        'compression-algo' : ('compression-algorithm', 1, SUITCompressionAlgorithm)
     })
 
 class SUITParameters(SUITManifestDict):
@@ -382,7 +387,7 @@ class SUITParameters(SUITManifestDict):
         'size' : ('image-size', 14, SUITPosInt),
         'uri' : ('uri', 21, SUITTStr),
         'src' : ('source-component', 22, SUITComponentIndex),
-        'compress' : ('compression-info', 19, SUITCompressionInfo)
+        'compression' : ('compression', 19, SUITBWrapField(SUITCompressionInfo))
     })
     def from_json(self, j):
         # print(j)
