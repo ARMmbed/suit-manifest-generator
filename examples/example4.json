@@ -14,7 +14,9 @@
             "loadable" : true,
             "decompress-on-load" : true,
             "load-id" : ["01"],
-            "compression-info" : "gzip"
+            "compression-info" : {
+                "compression-algorithm": "gzip"
+            }
         }
     ],
     "manifest-version": 1,
