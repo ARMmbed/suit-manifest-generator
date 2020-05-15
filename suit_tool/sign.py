@@ -91,15 +91,14 @@ def main(options):
         b'',
         cose_signature.payload.to_suit(),
     ], sort_keys = True)
-    sig_val = cbor.dumps(Sig_structure, sort_keys = True)
-    LOG.debug('Signing: {}'.format(binascii.b2a_hex(sig_val).decode('utf-8')))
+    LOG.debug('Signing: {}'.format(binascii.b2a_hex(Sig_structure).decode('utf-8')))
 
     signature_bytes = {
         'ES256' : get_cose_es_bytes,
         'ES384' : get_cose_es_bytes,
         'ES512' : get_cose_es_bytes,
         'EdDSA' : get_cose_ed25519_bytes,
-    }.get(options.key_type)(private_key, sig_val)
+    }.get(options.key_type)(private_key, Sig_structure)
 
     cose_signature.signature = SUITBytes().from_suit(signature_bytes)
 
