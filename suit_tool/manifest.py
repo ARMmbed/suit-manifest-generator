@@ -378,7 +378,7 @@ class SUITParameters(SUITManifestDict):
     fields = SUITManifestDict.mkfields({
         'vendor-id' : ('vendor-id', 1, SUITUUID),
         'class-id' : ('class-id', 2, SUITUUID),
-        'digest' : ('image-digest', 3, SUITDigest),
+        'digest' : ('image-digest', 3, SUITBWrapField(SUITDigest)),
         'size' : ('image-size', 14, SUITPosInt),
         'uri' : ('uri', 21, SUITTStr),
         'src' : ('source-component', 22, SUITComponentIndex),
