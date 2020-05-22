@@ -22,13 +22,14 @@ import json
 import cbor
 import itertools
 import textwrap
+from collections import OrderedDict
 
 def main(options):
-    m = json.loads(options.input_file.read())
+    m = json.loads(options.input_file.read(), object_pairs_hook=OrderedDict)
 
     nm = compile_manifest(options, m)
     if hasattr(options, 'severable') and options.severable:
-        nm = nm.to_severable()
+        nm = nm.to_severable('sha256')
     output = {
         'suit' : lambda x: cbor.dumps(x.to_suit(), sort_keys=True),
         'suit-debug' : lambda x: '\n'.join(itertools.chain.from_iterable(

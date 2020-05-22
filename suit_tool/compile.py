@@ -28,6 +28,8 @@ import itertools
 
 import logging
 
+from collections import OrderedDict
+
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes
 
@@ -123,14 +125,15 @@ def compile_manifest(options, m):
     m = copy.deepcopy(m)
     m['components'] += options.components
     # Compile list of All Component IDs
-    ids = set([
+    # There is no ordered set, so use ordered dict instead
+    ids = OrderedDict.fromkeys([
         SUITComponentId().from_json(id) for comp_ids in [
             [c[f] for f in [
                 'install-id', 'download-id', 'load-id'
             ] if f in c] for c in m['components']
         ] for id in comp_ids
     ])
-    cid_data = {}
+    cid_data = OrderedDict()
     for c in m['components']:
         if not 'install-id' in c:
             LOG.critical('install-id required for all components')
@@ -282,7 +285,7 @@ def compile_manifest(options, m):
                 # )
     #TODO: Text
     common = SUITCommon().from_json({
-        'components': [id.to_json() for id in ids],
+        'components': [id.to_json() for id in ids.keys()],
         'common-sequence': CommonSeq.to_json(),
     })
 

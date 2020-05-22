@@ -20,10 +20,13 @@
 import collections
 import binascii
 import cbor
+import json
 import copy
 import uuid
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes
+
+from collections import OrderedDict
 
 ManifestKey = collections.namedtuple(
     'ManifestKey',
@@ -88,7 +91,7 @@ class SUITPosInt(SUITInt):
 
 class SUITManifestDict:
     def mkfields(d):
-        # rd = {}
+        # rd = OderedDict()
         return {k: ManifestKey(*v) for k,v in d.items()}
 
     def __init__(self):
@@ -100,7 +103,7 @@ class SUITManifestDict:
         return self
 
     def to_json(self):
-        j = {}
+        j = OrderedDict()
         for k, f in self.fields.items():
             v = getattr(self, k)
             if v:
@@ -115,7 +118,7 @@ class SUITManifestDict:
         return self
 
     def to_suit(self):
-        sd = {}
+        sd = OrderedDict()
         for k, f in self.fields.items():
             v = getattr(self, k)
             if v:
@@ -175,7 +178,7 @@ class SUITKeyMap:
         self.v = self.keymap[self.rkeymap[d]]
         return self
     def to_debug(self, indent):
-        s = str(self.v) + ' / ' + self.to_json() + ' /'
+        s = str(self.v) + ' / ' + json.dumps(self.to_json(),sort_keys = True) + ' /'
         return s
 
 def SUITBWrapField(c):
@@ -258,7 +261,7 @@ class SUITBytes:
     def to_suit(self):
         return self.v
     def to_debug(self, indent):
-        return 'h\'' + self.to_json() + '\''
+        return 'h\'' + json.dumps(self.to_json(), sort_keys=True) + '\''
     def __eq__(self, rhs):
         return self.v == rhs.v
 
@@ -270,7 +273,7 @@ class SUITUUID(SUITBytes):
         self.v = uuid.UUID(bytes=d).bytes
         return self
     def to_debug(self, indent):
-        return 'h\'' + self.to_json() + '\' / ' + str(uuid.UUID(bytes=self.v)) + ' /'
+        return 'h\'' + json.dumps(self.to_json(), sort_keys=True) + '\' / ' + str(uuid.UUID(bytes=self.v)) + ' /'
 
 
 class SUITRaw:
@@ -654,7 +657,7 @@ class SUITWrapper(SUITManifestDict):
             if v is None:
                 continue
             cbor_field = cbor.dumps(v.to_suit(), sort_keys=True)
-            digest = hashes.Hash(digest_algorithms.get(digest_alg)(), backend=default_backend())
+            digest = hashes.Hash(self.digest_algorithms.get(digest_alg)(), backend=default_backend())
             digest.update(cbor_field)
             field_digest = SUITDigest().from_json({
                 'algorithm-id' : digest_alg,
@@ -680,7 +683,7 @@ class SUITWrapper(SUITManifestDict):
             digest = hashes.Hash(hashes.SHA256(), backend=default_backend())
             digest.update(cbor_field)
             actual_digest = digest.finalize()
-            field_digest = getattr(sev.nsev.v, k)
+            field_digest = getattr(nsev.v, k)
             expected_digest = field_digest.to_suit()[1]
             if digest != expected_digest:
                 raise Exception('Field Digest mismatch: For {}, expected: {}, got {}'.format(
