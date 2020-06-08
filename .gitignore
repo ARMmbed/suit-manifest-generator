@@ -3,3 +3,6 @@
 *.DS_Store
 *.hex
 examples/*.cbor
+examples/*.json.txt
+parser_examples/suit-app/BUILD/*
+parser_examples/suitloader/BUILD/*
