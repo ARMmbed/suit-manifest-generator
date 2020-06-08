@@ -73,6 +73,8 @@ class MainArgumentParser(object):
         get_pubkey_parser = subparsers.add_parser('pubkey', help='Get the public key for a supplied private key.')
 
         get_pubkey_parser.add_argument('-k', '--private-key', metavar='FILE', type=argparse.FileType('rb'), required=True)
+        get_pubkey_parser.add_argument('-t', '--type', metavar='FILE', choices=['uecc', 'pem', 'der'], default='pem')
+        get_pubkey_parser.add_argument('-o', '--output-file', metavar='FILE', type=argparse.FileType('wb'), default=sys.stdout)
 
         keygen_parser = subparsers.add_parser('keygen', help='Create a signing key. Not for production use')
 
