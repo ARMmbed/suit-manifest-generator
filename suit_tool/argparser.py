@@ -70,9 +70,9 @@ class MainArgumentParser(object):
         parse_parser.add_argument('-m', '--manifest', metavar='FILE', type=argparse.FileType('rb'), required=True)
         parse_parser.add_argument('-j', '--json-output', default=False, action='store_true', dest='json')
 
-        get_uecc_pubkey_parser = subparsers.add_parser('pubkey', help='Get the public key for a supplied private key in uECC-compatible C definition.')
+        get_pubkey_parser = subparsers.add_parser('pubkey', help='Get the public key for a supplied private key.')
 
-        get_uecc_pubkey_parser.add_argument('-k', '--private-key', metavar='FILE', type=argparse.FileType('rb'), required=True)
+        get_pubkey_parser.add_argument('-k', '--private-key', metavar='FILE', type=argparse.FileType('rb'), required=True)
 
         keygen_parser = subparsers.add_parser('keygen', help='Create a signing key. Not for production use')
 
