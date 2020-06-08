@@ -1,4 +1,3 @@
-#!/usr/bin/python3
 # -*- coding: utf-8 -*-
 # ----------------------------------------------------------------------------
 # Copyright 2019-2020 ARM Limited or its affiliates
