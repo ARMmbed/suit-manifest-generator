@@ -106,17 +106,14 @@ def make_sequence(cid, choices, seq, params, cmds, pcid_key=None, param_drctv='d
         for param, pcmd in neqparams.items():
             k,v = pcmd(cid, c)
             params[k] = v
-        print (params)
         if len(params):
             TECseq.v.append(mkCommand(pcid, param_drctv, params))
         if hasattr(TECseq, "v") and len(TECseq.v.items):
             TryEachCmd.append(TECseq)
     if len(TryEachCmd.items):
-        print(TryEachCmd)
         seq.append(mkCommand(cid, 'directive-try-each', TryEachCmd))
     # Finally, and equal commands
     for item, cmd in eqcmds.items():
-        print(cmd)
         seq.append(cmd(cid, choices[0]))
     return seq
 
@@ -251,9 +248,9 @@ def compile_manifest(options, m):
         if any(['loadable' in c for c in choices]):
             # Generate image load section
             LoadParams = {
-                'install-id' : lambda cid, data : ('source-component', c['install-id']),
-                'load-digest' : ('image-digest', c.get('load-digest', c['install-digest'])),
-                'load-size' : ('image-size', c.get('load-size', c['install-size']))
+                'install-id'  : lambda cid, data : ('source-component', c['install-id']),
+                'load-digest' : lambda cid, data : ('image-digest', c.get('load-digest', c['install-digest'])),
+                'load-size'   : lambda cid, data : ('image-size', c.get('load-size', c['install-size'])),
             }
             if 'compression-info' in c and c.get('decompress-on-load', False):
                 LoadParams['compression-info'] = lambda cid, data: ('compression-info', c['compression-info'])
