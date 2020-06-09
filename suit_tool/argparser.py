@@ -18,6 +18,8 @@
 # ----------------------------------------------------------------------------
 import sys, argparse, os
 from suit_tool import __version__
+from suit_tool import keygen 
+from suit_tool import get_pubkey
 import json
 import re
 
@@ -73,14 +75,15 @@ class MainArgumentParser(object):
         get_pubkey_parser = subparsers.add_parser('pubkey', help='Get the public key for a supplied private key.')
 
         get_pubkey_parser.add_argument('-k', '--private-key', metavar='FILE', type=argparse.FileType('rb'), required=True)
-        get_pubkey_parser.add_argument('-t', '--type', metavar='FILE', choices=['uecc', 'pem', 'der'], default='pem')
+        get_pubkey_parser.add_argument('-f', '--output-format', choices=get_pubkey.OutputFormaters.keys(), default='pem')
         get_pubkey_parser.add_argument('-o', '--output-file', metavar='FILE', type=argparse.FileType('wb'), default=sys.stdout)
 
         keygen_parser = subparsers.add_parser('keygen', help='Create a signing key. Not for production use')
 
-        keygen_parser.add_argument('-t', '--type', metavar='TYPE', choices=['secp256r1', 'secp384r1', 'secp521r1', 'ed25519'],
+        keygen_parser.add_argument('-t', '--type', choices=keygen.KeyGenerators.keys(),
             default='secp256r1', help='The type of the key to generate')
-        keygen_parser.add_argument('-o', '--output-file', metavar='FILE', type=argparse.FileType('wb'), required=True)
+        keygen_parser.add_argument('-o', '--output-file', metavar='FILE', type=argparse.FileType('wb'), default=sys.stdout)
+        keygen_parser.add_argument('-f', '--output-format', choices=keygen.OutputFormaters.keys(), default='pem')
 
         return parser
 

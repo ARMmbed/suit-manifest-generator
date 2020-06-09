@@ -26,18 +26,33 @@ from cryptography.hazmat.primitives import serialization as ks
 
 import logging
 import binascii
+import textwrap
+
 LOG = logging.getLogger(__name__)
+
+KeyGenerators = {
+    'secp256r1' : lambda : ec.generate_private_key(ec.SECP256R1(), default_backend()),
+    'secp384r1' : lambda : ec.generate_private_key(ec.SECP384R1(), default_backend()),
+    'secp521r1' : lambda : ec.generate_private_key(ec.SECP521R1(), default_backend()),
+    'ed25519' : lambda : ed25519.Ed25519PrivateKey.generate(),
+}
+OutputFormaters = {
+    'pem' : lambda pk: pk.private_bytes(ks.Encoding.PEM, ks.PrivateFormat.PKCS8, ks.NoEncryption()),
+    'der' : lambda pk: pk.private_bytes(ks.Encoding.DER, ks.PrivateFormat.PKCS8, ks.NoEncryption()),
+}
 
 def main(options):
     # Read the manifest wrapper
-    private_key = {
-        'secp256r1' : lambda : ec.generate_private_key(ec.SECP256R1(), default_backend()),
-        'secp384r1' : lambda : ec.generate_private_key(ec.SECP384R1(), default_backend()),
-        'secp521r1' : lambda : ec.generate_private_key(ec.SECP521R1(), default_backend()),
-        'ed25519' : lambda : ed25519.Ed25519PrivateKey.generate(),
-    }.get(options.type) ()
+    private_key = KeyGenerators.get(options.type) ()
 
+    odata = OutputFormaters.get(options.output_format)(private_key)
 
-    options.output_file.write(private_key.private_bytes(ks.Encoding.DER,
-        ks.PrivateFormat.PKCS8, ks.NoEncryption()))
+    if options.output_file.isatty():
+        try:
+            odata = odata.decode('utf-8')
+        except:
+            odata = binascii.b2a_hex(odata).decode('utf-8')
+        odata = '\n'.join(textwrap.wrap(odata, 64)) + '\n'
+    options.output_file.write(odata)
+
     return 0
