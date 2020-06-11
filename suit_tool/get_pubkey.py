@@ -18,6 +18,7 @@
 # ----------------------------------------------------------------------------
 import textwrap
 import binascii
+import pyhsslms
 
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.asymmetric import ec
@@ -26,9 +27,9 @@ from cryptography.hazmat.primitives import serialization as ks
 
 
 def to_uecc_pubkey(pk):
-    if not isinstance(private_key, ec.EllipticCurvePrivateKey):
-        raise Exception('Private key of type {} is not supported'.format(type(private_key)))
-    public_numbers = private_key.public_key().public_numbers()
+    if not isinstance(pk, ec.EllipticCurvePrivateKey):
+        raise Exception('Private key of type {} is not supported'.format(type(pk)))
+    public_numbers = pk.public_key().public_numbers()
     x = public_numbers.x
     y = public_numbers.y
     uecc_bytes = x.to_bytes(
@@ -44,8 +45,13 @@ def to_uecc_pubkey(pk):
 
 OutputFormaters = {
     'uecc' : to_uecc_pubkey,
-    'pem' : lambda pk: pk.private_bytes(ks.Encoding.PEM, ks.PrivateFormat.PKCS8, ks.NoEncryption()),
-    'der' : lambda pk: pk.private_bytes(ks.Encoding.DER, ks.PrivateFormat.PKCS8, ks.NoEncryption()),
+    'pem' : lambda pk: pk.public_key().public_bytes(ks.Encoding.PEM, ks.PublicFormat.SubjectPublicKeyInfo),
+    'der' : lambda pk: pk.public_key().public_bytes(ks.Encoding.DER, ks.PublicFormat.SubjectPublicKeyInfo),
+    'hsslms' : lambda pk: pk.publicKey().serialize(),
+    'c-hsslms' : lambda pk: ('\n    '.join(['const uint8_t hsslms_public_key[] = {'] + textwrap.wrap(
+        ', '.join(['{:0=#4x}'.format(x) for x in pk.publicKey().serialize()]),
+        76
+    )) + '\n};\n').encode('utf-8')
 }
 
 
@@ -58,8 +64,8 @@ def main(options):
             password=None,
             backend=default_backend()
         )
-    # elif c-hss-lms:
-    #     pass
+    elif options.output_format in ('c-hsslms', 'hsslms'):
+        private_key = pyhsslms.HssPrivateKey.deserialize(options.private_key.read())
 
     odata = OutputFormaters.get(options.output_format)(private_key)
 
@@ -68,7 +74,11 @@ def main(options):
             odata = odata.decode('utf-8')
         except:
             odata = binascii.b2a_hex(odata).decode('utf-8')
-        odata = '\n'.join(textwrap.wrap(odata, 64)) + '\n'
+
+        odata = '\n'.join(
+            [line for lines in [textwrap.wrap(line, 80) 
+                for line in odata.split('\n')] for line in lines]
+        ) + '\n'
     options.output_file.write(odata)
 
     return 0
