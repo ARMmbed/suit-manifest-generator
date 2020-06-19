@@ -650,27 +650,15 @@ PARSE_HANDLER(image_match_handler)
     uint64_t image_size;
     //TODO: Component ID
     size_t component_index = 0;
-    int vidx = key_to_var_index(SUIT_PARAMETER_IMAGE_SIZE);
-    if (vidx < 0) {return vidx;}
-    suit_reference_t *sz = &ctx->vars[component_index][vidx];
+    suit_reference_t *sz;
+    int rc = key_to_reference(SUIT_PARAMETER_IMAGE_SIZE, &sz, ctx);
     const uint8_t *np = sz->ptr;
-    const uint8_t *nend = sz->end;
-    int rc = cbor_get_uint64(&np, nend, &image_size);
-
+    rc = rc ? rc : cbor_get_uint64(&np, sz->end, &image_size);
     const uint8_t *image;
-    if (rc == CBOR_ERR_NONE) {
-        rc = suit_platform_get_image_ref(NULL, &image);
-    }
-    if (rc == CBOR_ERR_NONE) {
-        vidx = key_to_var_index(SUIT_PARAMETER_IMAGE_SIZE);
-        rc = vidx < 0 ? vidx : rc;
-    }
-    if (rc == CBOR_ERR_NONE)
-        rc = suit_check_digest(
-            &ctx->vars[component_index][vidx],
-            image,
-            image_size
-        );
+    rc = rc ? rc : suit_platform_get_image_ref(NULL, &image);
+    suit_reference_t *exp;
+    rc = rc ? rc : key_to_reference(SUIT_PARAMETER_IMAGE_DIGEST, &exp, ctx);
+    rc = rc ? rc : suit_check_digest(exp, image, image_size);
     return rc;
 }
 
