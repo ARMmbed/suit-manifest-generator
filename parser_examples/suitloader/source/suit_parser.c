@@ -226,21 +226,21 @@ int cbor_skip(const uint8_t **p, const uint8_t *end)
 int get_handler(
     const uint8_t cbor_b1,
     const uint8_t cbor_sub,
-    const int64_t key64,
+    const int32_t key,
     const cbor_keyed_parse_elements_t* handlers
 ) {
     size_t i;
     // Find a matching key
-    for (i = 0; i < n_handlers && handlers[i].key < key64; i++)
-    for (i = 0; i < handlers->count && handlers->elements[i].key < key64; i++)
+    for (i = 0; i < handlers->count && handlers->elements[i].key < key; i++)
     {}
-    if (i >= handlers->count || handlers->elements[i].key != key64 ) {
-        PD_PRINTF("Couldn't find a handler for key %d\n", (int) key64);
+
+    if (i >= handlers->count || handlers->elements[i].key != key ) {
+        PD_PRINTF("Couldn't find a handler for key %d\n", (int) key);
         RETURN_ERROR(-CBOR_ERR_KEY_MISMATCH);
     }
     // PD_PRINTF("Key Matched, Matching major %u, sub:%u\n", (unsigned) cbor_b1>>5, (unsigned)cbor_sub >> 5);
 
-    for (; i < handlers->count && handlers->elements[i].key == key64; i++) {
+    for (; i < handlers->count && handlers->elements[i].key == key; i++) {
         uint8_t cbor_type = (cbor_b1 & CBOR_TYPE_MASK);
         if (handlers->elements[i].bstr_wrap) {
             if (cbor_type != CBOR_TYPE_BSTR) {
@@ -301,7 +301,7 @@ static int handle_keyed_element(
     const uint8_t* end,
     suit_parse_context_t *ctx,
     const cbor_keyed_parse_elements_t *handlers,
-    int64_t key
+    int32_t key
 ) {
     PD_PRINTF("parse offset: %zu, key: %" PRIi64 "\n", (size_t)((*p)-ctx->envelope.ptr), key);
 
