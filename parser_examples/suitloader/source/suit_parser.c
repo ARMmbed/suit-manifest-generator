@@ -230,11 +230,18 @@ int get_handler(
     const cbor_keyed_parse_elements_t* handlers
 ) {
     size_t i;
+    // Step 1: find the first key that matches
     // Find a matching key
-    for (i = 0; i < handlers->count && handlers->elements[i].key < key; i++)
-    {}
+    int success = 0;
+    for (i = 0; i < handlers->count; i++)
+    {
+        if (handlers->elements[i].key == key) {
+            success = 1;
+            break;
+        }
+    }
 
-    if (i >= handlers->count || handlers->elements[i].key != key ) {
+    if (!success ) {
         PD_PRINTF("Couldn't find a handler for key %d\n", (int) key);
         RETURN_ERROR(-CBOR_ERR_KEY_MISMATCH);
     }
