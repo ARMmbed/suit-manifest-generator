@@ -27,6 +27,7 @@ from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives.asymmetric import utils as asymmetric_utils
 from cryptography.hazmat.primitives import serialization as ks
 
+import pyhsslms
 
 from suit_tool.manifest import COSE_Sign1, COSEList, SUITDigest,\
                                SUITWrapper, SUITBytes, SUITBWrapField
@@ -34,15 +35,23 @@ import logging
 import binascii
 LOG = logging.getLogger(__name__)
 
-def get_cose_es_bytes(private_key, sig_val):
+def get_cose_es_bytes(options, private_key, sig_val):
     ASN1_signature = private_key.sign(sig_val, ec.ECDSA(hashes.SHA256()))
     r,s = asymmetric_utils.decode_dss_signature(ASN1_signature)
     ssize = private_key.key_size
     signature_bytes = r.to_bytes(ssize//8, byteorder='big') + s.to_bytes(ssize//8, byteorder='big')
     return signature_bytes
 
-def get_cose_ed25519_bytes(private_key, sig_val):
+def get_cose_ed25519_bytes(options, private_key, sig_val):
     return private_key.sign(sig_val)
+
+def get_hsslms_bytes(options, private_key, sig_val):
+    sig = private_key.sign(sig_val)
+    key_file_name = options.private_key.name
+    options.private_key.close()
+    with open(key_file_name, 'wb') as fd:
+        fd.write(private_key.serialize())
+    return sig
 
 def main(options):
     # Read the manifest wrapper
@@ -50,8 +59,9 @@ def main(options):
 
     private_key = None
     digest = None
+    private_key_buffer = options.private_key.read()
     try:
-        private_key = ks.load_pem_private_key(options.private_key.read(), password=None, backend=default_backend())
+        private_key = ks.load_pem_private_key(private_key_buffer, password=None, backend=default_backend())
         if isinstance(private_key, ec.EllipticCurvePrivateKey):
             options.key_type = 'ES{}'.format(private_key.key_size)
         elif isinstance(private_key, ed25519.Ed25519PrivateKey):
@@ -66,11 +76,15 @@ def main(options):
             'EdDSA' : hashes.Hash(hashes.SHA256(), backend=default_backend()),
         }.get(options.key_type)
     except:
-        digest= hashes.Hash(hashes.SHA256(), backend=default_backend())
-        # private_key = None
-        # TODO: Implement loading of DSA keys not supported by python cryptography
-        LOG.critical('Non-library key type not implemented')
-        # return 1
+        try:
+            digest = hashes.Hash(hashes.SHA256(), backend=default_backend())
+            private_key = pyhsslms.HssPrivateKey.deserialize(private_key_buffer)
+            options.key_type = 'HSS-LMS'
+        except:
+            # private_key = None
+            # TODO: Implement loading of DSA keys not supported by python cryptography
+            LOG.critical('Non-library key type not implemented')
+            return 1
 
     digest.update(cbor.dumps(wrapper[SUITWrapper.fields['manifest'].suit_key]))
 
@@ -98,7 +112,8 @@ def main(options):
         'ES384' : get_cose_es_bytes,
         'ES512' : get_cose_es_bytes,
         'EdDSA' : get_cose_ed25519_bytes,
-    }.get(options.key_type)(private_key, Sig_structure)
+        'HSS-LMS' : get_hsslms_bytes,
+    }.get(options.key_type)(options, private_key, Sig_structure)
 
     cose_signature.signature = SUITBytes().from_suit(signature_bytes)
 

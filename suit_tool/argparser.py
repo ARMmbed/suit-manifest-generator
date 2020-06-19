@@ -84,6 +84,7 @@ class MainArgumentParser(object):
             default='secp256r1', help='The type of the key to generate')
         keygen_parser.add_argument('-o', '--output-file', metavar='FILE', type=argparse.FileType('wb'), default=sys.stdout)
         keygen_parser.add_argument('-f', '--output-format', choices=keygen.OutputFormaters.keys(), default='pem')
+        keygen_parser.add_argument('-l', '--levels', help='The number of hss-lms levels', type=int, default=2)
 
         return parser
 

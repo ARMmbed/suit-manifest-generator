@@ -27,6 +27,11 @@ from cryptography.hazmat.primitives import hashes
 
 from collections import OrderedDict
 
+import logging
+LOG = logging.getLogger(__name__)
+
+TreeBranch = []
+
 ManifestKey = collections.namedtuple(
     'ManifestKey',
     [
@@ -48,6 +53,12 @@ def to_bytes(s):
                 return s
             else:
                 return str(s).encode('utf-8')
+
+class SUITException(Exception):
+    def __init__(self, m, data, tree_branch):
+        super().__init__(m)
+        self.data = data
+        self.tree_branch = tree_branch
 
 class SUITCommonInformation:
     def __init__(self):
@@ -71,7 +82,9 @@ class SUITInt:
     def to_json(self):
         return self.v
     def from_suit(self, v):
+        TreeBranch.append(type(self))
         self.v = int(v)
+        TreeBranch.pop()
         return self
     def to_suit(self):
         return self.v
@@ -80,10 +93,12 @@ class SUITInt:
 
 class SUITPosInt(SUITInt):
     def from_json(self, v):
+        TreeBranch.append(type(self))
         _v = int(v)
         if _v < 0:
             raise Exception('Positive Integers must be >= 0')
         self.v = _v
+        TreeBranch.pop()
         return self
     def from_suit(self, v):
         return self.from_json(v)
@@ -110,10 +125,14 @@ class SUITManifestDict:
         return j
 
     def from_suit(self, data):
+        TreeBranch.append(type(self))
         for k, f in self.fields.items():
+            TreeBranch.append(k)
             v = data.get(f.suit_key, None)
             d = f.obj().from_suit(v) if v is not None else None
             setattr(self, k, d)
+            TreeBranch.pop()
+        TreeBranch.pop()
         return self
 
     def to_suit(self):
@@ -138,8 +157,12 @@ class SUITManifestDict:
 
 class SUITManifestNamedList(SUITManifestDict):
     def from_suit(self, data):
+        TreeBranch.append(type(self))
         for k, f in self.fields.items():
+            TreeBranch.append(k)
             setattr(self, k, f.obj().from_suit(data[f.suit_key]))
+            TreeBranch.pop()
+        TreeBranch.pop()
         return self
 
     def to_suit(self):
@@ -174,7 +197,9 @@ class SUITKeyMap:
     def to_suit(self):
         return self.v
     def from_suit(self, d):
+        TreeBranch.append(type(self))
         self.v = self.keymap[self.rkeymap[d]]
+        TreeBranch.pop()
         return self
     def to_debug(self, indent):
         s = str(self.v) + ' / ' + json.dumps(self.to_json(),sort_keys = True) + ' /'
@@ -185,7 +210,21 @@ def SUITBWrapField(c):
         def to_suit(self):
             return cbor.dumps(self.v.to_suit(), sort_keys=True)
         def from_suit(self, d):
-            self.v = c().from_suit(cbor.loads(d))
+            TreeBranch.append(type(self))
+            try:
+                self.v = c().from_suit(cbor.loads(d))
+            except SUITException as e:
+                raise e
+            except Exception as e:
+                LOG.debug('At {}: failed to load "{}" as CBOR'.format(type(self),binascii.b2a_hex(d).decode('utf-8')))
+                LOG.debug('Path: {}'.format(TreeBranch))
+                # LOG.debug('At {}: failed to load "{}" as CBOR'.format(type(self),binascii.b2a_hex(d).decode('utf-8')))
+                raise SUITException(
+                    m = 'At {}: failed to load "{}" as CBOR'.format(type(self),binascii.b2a_hex(d).decode('utf-8')),
+                    data = d,
+                    tree_branch = TreeBranch
+                )
+            TreeBranch.pop()
             return self
         def to_json(self):
             return self.v.to_json()
@@ -227,8 +266,12 @@ class SUITManifestArray:
 
     def from_suit(self, data):
         self.items = []
+        TreeBranch.append(type(self))
         for d in data:
+            TreeBranch.append(len(self.items))
             self.items.append(self.field.obj().from_suit(d))
+            TreeBranch.pop()
+        TreeBranch.pop()
         return self
 
     def to_suit(self):
@@ -260,7 +303,7 @@ class SUITBytes:
     def to_suit(self):
         return self.v
     def to_debug(self, indent):
-        return 'h\'' + json.dumps(self.to_json(), sort_keys=True) + '\''
+        return 'h\'' + self.to_json() + '\''
     def __eq__(self, rhs):
         return self.v == rhs.v
 
