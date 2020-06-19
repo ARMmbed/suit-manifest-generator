@@ -26,27 +26,7 @@
 #include <stdio.h>
 #include <string.h>
 
-const uint8_t vendor_id[16] = {
-    0xfa, 0x6b, 0x4a, 0x53, 0xd5, 0xad, 0x5f, 0xdf,
-    0xbe, 0x9d, 0xe6, 0x63, 0xe4, 0xd4, 0x1f, 0xfe
-};
-const uint8_t class_id[16] = {
-    0x14, 0x92, 0xaf, 0x14, 0x25, 0x69, 0x5e, 0x48,
-    0xbf, 0x42, 0x9b, 0x2d, 0x51, 0xf2, 0xab, 0x45
-};
 
-const uint8_t COSE_Sign1_context[] = "\x84\x6ASignature1";
-
-const uint8_t public_key[] = {
-    0x84, 0x96, 0x81, 0x1a, 0xae, 0x0b, 0xaa, 0xab,
-    0xd2, 0x61, 0x57, 0x18, 0x9e, 0xec, 0xda, 0x26,
-    0xbe, 0xaa, 0x8b, 0xf1, 0x1b, 0x6f, 0x3f, 0xe6,
-    0xe2, 0xb5, 0x65, 0x9c, 0x85, 0xdb, 0xc0, 0xad,
-    0x3b, 0x1f, 0x2a, 0x4b, 0x6c, 0x09, 0x81, 0x31,
-    0xc0, 0xa3, 0x6d, 0xac, 0xd1, 0xd7, 0x8b, 0xd3,
-    0x81, 0xdc, 0xdf, 0xb0, 0x9c, 0x05, 0x2d, 0xb3,
-    0x39, 0x91, 0xdb, 0x73, 0x38, 0xb4, 0xa8, 0x96,
-};
 
 
 size_t bl_slot_index;
@@ -72,6 +52,15 @@ int suit_platform_get_image_ref(
     return 0;
 }
 
+void compute_sha256(uint8_t *hash, const uint8_t *msg, size_t msg_len) {
+    mbedtls_sha256_context ctx;
+    mbedtls_sha256_init (&ctx);
+    mbedtls_sha256_starts_ret (&ctx, 0);
+    mbedtls_sha256_update_ret(&ctx, msg, msg_len);
+    mbedtls_sha256_finish_ret(&ctx, hash);
+    mbedtls_sha256_free(&ctx);
+}
+
 int suit_platform_verify_image(
     const uint8_t *component_id,
     int digest_type,
@@ -83,15 +72,8 @@ int suit_platform_verify_image(
     }
 
     const uint8_t *image = (const uint8_t *)((uintptr_t)entrypoints[bl_slot_index].app_offset);
-
-
-    mbedtls_sha256_context ctx;
     uint8_t hash[32];
-    mbedtls_sha256_init (&ctx);
-    mbedtls_sha256_starts_ret (&ctx, 0);
-    mbedtls_sha256_update_ret(&ctx, image, image_size);
-    mbedtls_sha256_finish_ret(&ctx, hash);
-    mbedtls_sha256_free(&ctx);
+    compute_sha256(hash, image, image_size);
     // no secret information in this hash, so memcmp is fine
     return memcmp(hash, expected_digest, sizeof(hash));
 
@@ -102,127 +84,63 @@ int suit_platform_verify_sha256(
     const uint8_t *data,
     size_t data_len)
 {
-    mbedtls_sha256_context ctx;
     uint8_t hash[32];
 
-    mbedtls_sha256_init (&ctx);
-    mbedtls_sha256_starts_ret (&ctx, 0);
-    mbedtls_sha256_update_ret(&ctx, data, data_len);
-    mbedtls_sha256_finish_ret(&ctx, hash);
-    mbedtls_sha256_free(&ctx);
+    compute_sha256(hash, data, data_len);
     if (0==memcmp(hash, expected_digest, sizeof(hash))) {
         return CBOR_ERR_NONE;
     }
     else {
-        return SUIT_ERROR_DIGEST_MISMATCH;
+        RETURN_ERROR( SUIT_ERROR_DIGEST_MISMATCH);
     }
 }
 
-int do_cose_auth(
-    const uint8_t *auth_buffer,
-    const uint8_t *data, size_t data_size)
+
+int suit_platform_verify_digest(int alg, const uint8_t *exp, size_t exp_len, const uint8_t *data, size_t data_len)
 {
-    const uint8_t* p = auth_buffer;
-    cbor_value_t auth_bstr;
-    int rc = cbor_check_type_extract_ref(&p, p + 9, &auth_bstr, CBOR_TYPE_BSTR);
-    if (rc) return rc;
-    p = auth_bstr.ref.ptr;
-    const uint8_t *auth_end = p + auth_bstr.ref.length;
-    // The auth container is a list.
-    // Only support single authorisation/signature
-    // TODO: Multiple authorisations
-    if (p[0] != 0x81) {
-        RETURN_ERROR(1);
+    switch (alg) {
+        // TODO: expected digest length.
+        case SUIT_DIGEST_TYPE_SHA256:
+            return suit_platform_verify_sha256(exp, data, data_len);
     }
-    p += 1;
-    // A COSE_Sign1_tagged must begin with 0xD2 0x84
-    if (p[0] != 0xD2 || p[1] != 0x84) {
-        RETURN_ERROR(1);
-    }
-    p += 2;
-    // COSE_Sign1 = [
-    //     protected : bstr .cbor header_map / bstr .size 0,
-    //     unprotected : header_map,
-    //     payload : bstr / nil,
-    //     signature : bstr
-    // ]
-    cbor_value_t values[4];
-    const uint8_t COSE_Sign1_types[] = {
-        CBOR_TYPE_BSTR,
-        CBOR_TYPE_MAP,
-        CBOR_TYPE_BSTR,
-        CBOR_TYPE_BSTR
-    };
-    for (size_t i = 0; i < 4; i++) {
-        const uint8_t* cbor_start = p;
-        rc = cbor_check_type_extract_ref(&p, auth_end, &values[i], COSE_Sign1_types[i]);
-        if (rc) return rc;
-        if (COSE_Sign1_types[i] == CBOR_TYPE_BSTR) {
-            p = values[i].ref.ptr + values[i].ref.length;
-        } else {
-            p = cbor_start;
-            rc = cbor_skip(&p, auth_end);
-            if(rc) return rc;
-        }
-    }
-    // Check that body_protected is recognised
-    if (values[0].ref.length != 3) {
-        RETURN_ERROR(2);
-    }
-    if (memcmp(values[0].ref.ptr, "\xA1\x01\x26", 3) != 0) {
-        RETURN_ERROR(3);
-    }
-    // Digest the signed object:
-    //    Sig_structure = [
-    //        context : "Signature"                      ; Const
-    //        body_protected : empty_or_serialized_map,  ; Included in auth buffer
-    //        external_aad : bstr,                       ; NULL
-    //        payload : bstr                             ; Included in manifest
-    //    ]
-    // body_protected is a digest between 224 and 512 bits
-    // There should be an array wrapper (1B) and a type identifier (1B)
+    RETURN_ERROR(SUIT_ERROR_DIGEST_MISMATCH);
+}
 
-    size_t struct_len =
-        sizeof(COSE_Sign1_context) - 1 +
-        (values[0].ref.length + values[0].ref.ptr - values[0].cbor_start) +
-        1 +
-        (values[2].ref.length + values[2].ref.ptr - values[2].cbor_start);
-    uint8_t bstr_start[1+sizeof(size_t)];
+int ES256_verify(
+                const uint8_t *msg, size_t msg_len,
+                const uint8_t *sig, size_t sig_len,
+                const uint8_t *kid, size_t kid_len)
+{
+    //TODO: SHA
+    uint8_t hash[32] = {0};
+    compute_sha256(hash, msg, msg_len);
 
-    size_t byte_size = sizeof(size_t) - __builtin_clz(struct_len)/8;
-    size_t byte_size_log = sizeof(size_t)*8 - __builtin_clz(byte_size);
-    bstr_start[0] = CBOR_TYPE_BSTR + byte_size_log + 23;
-    for (size_t n = byte_size; n; n--) {
-        bstr_start[byte_size - (n - 1)] = (struct_len >> ((n - 1)<<3));
+    //TODO: Lookup public key by key-id
+    if (uECC_verify(public_key, hash, sig)) {
+        return CBOR_ERR_NONE;
     }
-    mbedtls_sha256_context ctx;
-    uint8_t hash[32];
-    mbedtls_sha256_init (&ctx);
-    mbedtls_sha256_starts_ret (&ctx, 0);
-    mbedtls_sha256_update_ret(&ctx, bstr_start, 1 + byte_size);
-    mbedtls_sha256_update_ret(&ctx, COSE_Sign1_context, sizeof(COSE_Sign1_context) - 1);
-    mbedtls_sha256_update_ret(&ctx, values[0].cbor_start, values[0].ref.length + values[0].ref.ptr - values[0].cbor_start);
-    mbedtls_sha256_update_ret(&ctx, (uint8_t *)"\x40", 1);
-    mbedtls_sha256_update_ret(&ctx, values[2].cbor_start, (values[2].ref.length + values[2].ref.ptr - values[2].cbor_start));
-    mbedtls_sha256_finish_ret(&ctx, hash);
-    mbedtls_sha256_free(&ctx);
-
-    rc = uECC_verify(public_key, hash, values[3].ref.ptr);
-    if (!rc) {
-        return SUIT_ERR_SIG;
+    else {
+        RETURN_ERROR(SUIT_ERR_SIG);
     }
+}
 
-    // Verify the manifest
-
-    // Extract the signed digest of the manifest
-
-    rc = verify_suit_digest(
-        values[2].ref.ptr,
-        values[2].ref.ptr + 1 + 8 + 2, //TODO: Fix length handling
-        data,
-        data_size);
-    if (rc != CBOR_ERR_NONE) {
-        rc = SUIT_ERR_SIG;
+int COSEAuthVerify(
+                const uint8_t *msg, size_t msg_len,
+                const uint8_t *sig, size_t sig_len,
+                const uint8_t *kid, size_t kid_len,                
+                int alg)
+{
+    int rc;
+    switch (alg) {
+        case COSE_ES256:
+            rc = ES256_verify(
+                msg, msg_len,
+                sig, sig_len,
+                kid, kid_len);
+            break;
+        default:
+            SET_ERROR(rc, CBOR_ERR_UNIMPLEMENTED);
+            break;
     }
     return rc;
 }

@@ -31,7 +31,7 @@
 #define CBOR_TYPE_MAP (5 << 5)
 #define CBOR_TYPE_TAG (6 << 5)
 #define CBOR_TYPE_SIMPLE (7 << 5)
-#define CBOR_TYPE_MAX (7 << 5)
+#define CBOR_TYPE_MASK (7 << 5)
 
 #define CBOR_FALSE (CBOR_TYPE_SIMPLE | 20)
 #define CBOR_TRUE (CBOR_TYPE_SIMPLE | 21)
@@ -39,6 +39,64 @@
 
 #define SUIT_SUPPORTED_VERSION 1
 
+#define SIGNATURE1 "Signature1"
+
+// Signature1 is never more than 256 bytes long.
+#define SUIT_SIGNATURE1_BSTR_START_MAX (1+1)
+// Signature1 is always 4 elements
+#define SUIT_SIGNATURE1_ARRAY_START_LEN 1
+// Signature1 context length
+#define SUIT_SIGNATURE1_CONTEXT_LEN (sizeof(SIGNATURE1)-1)
+// There are fewer than 23 header fields, so only 1 byte for header map
+#define SUIT_SIGNATURE1_HDRMAP_START_LEN 1
+// Each header field consists of 1 integer field identifier with a value
+// below 23 and one field with a size dependent on the field.
+// Typically, only the algorithm is defined in protected headers.
+#define SUIT_SIGNATURE1_HDR_ALG_LEN (2)
+
+#define SUIT_BODYPROTECTED_MAX_LEN (\
+    SUIT_SIGNATURE1_BSTR_START_MAX +\
+    SUIT_SIGNATURE1_HDRMAP_START_LEN +\
+    SUIT_SIGNATURE1_HDR_ALG_LEN \
+)
+// AAD is not used in SUIT
+#define SUIT_SIGNATURE1_AAD_LEN 1
+
+// The payload contains a BSTR-encoded SUIT Digest
+// Since a digest itself is always at least 28 bytes (SHA224) and never
+// more than 64 bytes (SHA512), the bstr header is always 2 bytes
+#define SUIT_DIGEST_BSTR_START_MAX SUIT_SIGNATURE1_BSTR_START_MAX
+// The array is always fewer than 24 elements, so the array is 1 byte
+#define SUIT_DIGEST_ARRAY_START_LEN SUIT_SIGNATURE1_ARRAY_START_LEN
+// The type identifier of the digest should always be 1 byte
+#define SUIT_DIGEST_TYPE_MAX_LEN 1
+#ifndef SUIT_DIGEST_SIZE
+// The longest digest supported is SHA512 (64 bytes)
+#define SUIT_DIGEST_SIZE 64
+#endif
+
+#define SUIT_SIGNATURE1_PAYLOAD_LEN (\
+    SUIT_DIGEST_BSTR_START_MAX +\
+    SUIT_DIGEST_ARRAY_START_LEN +\
+    SUIT_DIGEST_TYPE_MAX_LEN +\
+    SUIT_DIGEST_BSTR_START_MAX +\
+    SUIT_DIGEST_SIZE \
+)
+
+#define SUIT_SIGNATURE1_MAX_LEN (\
+    SUIT_SIGNATURE1_BSTR_START_MAX +\
+    SUIT_SIGNATURE1_ARRAY_START_LEN +\
+    SUIT_SIGNATURE1_CONTEXT_LEN +\
+    SUIT_BODYPROTECTED_MAX_LEN +\
+    SUIT_SIGNATURE1_AAD_LEN +\
+    SUIT_SIGNATURE1_PAYLOAD_LEN \
+)
+
+#define UUID_SIZE (128/8)
+#define COSE_SIGN1_TAG (18)
+#define COSE_HDR_ALG (1)
+#define COSE_HDR_KID (4)
+#define COSE_ES256 (-7)
 
 #define PRINT_ON_ERROR 0
 
@@ -57,8 +115,8 @@
 
 #define ARRAY_SIZE(X) (sizeof(X)/sizeof((X)[0]))
 
-#define SUIT_OUTER_AUTH 2
-#define SUIT_OUTER_MANIFEST 3
+#define SUIT_ENVELOPE_AUTH 2
+#define SUIT_ENVELOPE_MANIFEST 3
 
 #define SUIT_MANIFEST_VERSION 1
 #define SUIT_MANIFEST_SEQUCENCE_NUMBER 2
@@ -82,35 +140,101 @@
 #define SUIT_DIRECTIVE_FETCH 21
 #define SUIT_DIRECTIVE_INVOKE 23
 
-#define SUIT_PARAMETER_VENDOR_ID 3
-#define SUIT_PARAMETER_CLASS_ID 4
-#define SUIT_PARAMETER_URI 6
-#define SUIT_PARAMETER_SOURCE_COMPONENT 10
-#define SUIT_PARAMETER_IMAGE_DIGEST 11
-#define SUIT_PARAMETER_IMAGE_SIZE 12
+#define SUIT_PARAMETER_VENDOR_ID 1
+#define SUIT_PARAMETER_CLASS_ID 2
+#define SUIT_PARAMETER_IMAGE_DIGEST 3
+#define SUIT_PARAMETER_IMAGE_SIZE 14
+#define SUIT_PARAMETER_URI 21
+#define SUIT_PARAMETER_SOURCE_COMPONENT 22
 
 #define SUIT_DIGEST_TYPE_SHA224 1
 #define SUIT_DIGEST_TYPE_SHA256 2
 #define SUIT_DIGEST_TYPE_SHA384 3
 
+#define SUIT_SUPPORT_VAR(VAR)  (1L <<((VAR)-1))
+#define SUIT_SUPPORTED_VARS ( \
+    SUIT_SUPPORT_VAR(SUIT_PARAMETER_VENDOR_ID) | \
+    SUIT_SUPPORT_VAR(SUIT_PARAMETER_CLASS_ID) | \
+    SUIT_SUPPORT_VAR(SUIT_PARAMETER_IMAGE_DIGEST) | \
+    SUIT_SUPPORT_VAR(SUIT_PARAMETER_IMAGE_SIZE) | \
+    SUIT_SUPPORT_VAR(SUIT_PARAMETER_URI) | \
+    SUIT_SUPPORT_VAR(SUIT_PARAMETER_SOURCE_COMPONENT) | \
+    0)
+
+#define COUNT_BITS_2(X)  ((X) - (((X)>>1) & 0x55555555))
+#define COUNT_BITS_4(X)  (((COUNT_BITS_2(X) >> 2) & 0x33333333UL) + ((COUNT_BITS_2(X)) & 0x33333333UL))
+#define COUNT_BITS_8(X)  (((COUNT_BITS_4(X) >> 4) + COUNT_BITS_4(X)) & 0x0F0F0F0F)
+#define COUNT_BITS_16(X) ((COUNT_BITS_8(X) >> 8) + COUNT_BITS_8(X))
+#define COUNT_BITS_32(X) (((COUNT_BITS_16(X) >> 16) + COUNT_BITS_16(X)) & 0x3F)
+
+
+#define SUIT_VAR_COUNT (COUNT_BITS_32(SUIT_SUPPORTED_VARS))
+
 #ifdef PARSER_DEBUG
+#define CBOR_KPARSE_ELEMENT_C_BWRAP_KV(KEY, TYPE, CHILDREN, DESC)\
+    {.key = (KEY), 0, .type = (TYPE) >> 5, .is_kv = 1, .bstr_wrap = 1, 0, 0, 0, .ptr = (CHILDREN), .desc=(DESC)}
+#define CBOR_KPARSE_ELEMENT_C_BWRAP(KEY, TYPE, CHILDREN, DESC)\
+    {.key = (KEY), 0, .type = (TYPE) >> 5, 0, .bstr_wrap = 1, 0, 0, 0, .ptr = (CHILDREN), .desc=(DESC)}
+#define CBOR_KPARSE_ELEMENT_A_BWRAP(KEY, TYPE, CHILDREN, DESC)\
+    {.key = (KEY), 0, .type = (TYPE) >> 5, 0, .bstr_wrap = 1, .is_array = 1, 0, 0, .ptr = (CHILDREN), .desc=(DESC)}
+#define CBOR_KPARSE_ELEMENT_C(KEY, TYPE, CHILDREN, DESC)\
+    {.key = (KEY), 0, .type = (TYPE) >> 5, 0, 0, 0, 0, 0, .ptr = (CHILDREN), .desc=(DESC)}
+#define CBOR_KPARSE_ELEMENT_H(KEY, TYPE, HANDLER, DESC)\
+    {.key = (KEY), 0, .type = (TYPE) >> 5, .has_handler = 1, 0, 0, 0, 0, .ptr = (HANDLER), .desc=(DESC)}
+#define CBOR_KPARSE_ELEMENT_H_BWRAP(KEY, TYPE, HANDLER, DESC)\
+    {.key = (KEY), 0, .type = (TYPE) >> 5, .has_handler = 1, .bstr_wrap = 1, 0, 0, 0, .ptr = (HANDLER), .desc=(DESC)}
 #define CBOR_KPARSE_ELEMENT(KEY, TYPE, HANDLER, DESC)\
-    {.key = (KEY), 0, .type = (TYPE) >> 5, 0, 0, 0, .handler=(HANDLER), .desc=(DESC)}
+    {.key = (KEY), 0, .type = (TYPE) >> 5, 0, 0, 0, .ptr=(HANDLER), .desc=(DESC)}
 #define CBOR_KPARSE_ELEMENT_NULL(KEY, TYPE, HANDLER, DESC)\
-    {.key = (KEY), 0, .type = (TYPE) >> 5, 0, 0, .null_opt = 1, .handler=(HANDLER), .desc=(DESC)}
+    {.key = (KEY), 0, .type = (TYPE) >> 5, 0, 0, .null_opt = 1, .ptr=(HANDLER), .desc=(DESC)}
 #define CBOR_KPARSE_ELEMENT_CHOICE(KEY, TYPE, HANDLER, DESC)\
-    {.key = (KEY), 0, .type = (TYPE) >> 5, 0, .choice = 1, 0, .handler=(HANDLER), .desc=(DESC)}
+    {.key = (KEY), 0, .type = (TYPE) >> 5, 0, .choice = 1, 0, .ptr=(HANDLER), .desc=(DESC)}
 #define PD_PRINTF(...)\
     printf(__VA_ARGS__)
 #else
+#define CBOR_KPARSE_ELEMENT_C_BWRAP_KV(KEY, TYPE, CHILDREN, DESC)\
+    {.key = (KEY), 0, .type = (TYPE) >> 5, .is_kv = 1, .bstr_wrap = 1, 0, 0, 0, .ptr = (CHILDREN)}
+#define CBOR_KPARSE_ELEMENT_C_BWRAP(KEY, TYPE, CHILDREN, DESC)\
+    {.key = (KEY), 0, .type = (TYPE) >> 5, 0, .bstr_wrap = 1, 0, 0, 0, .ptr = (CHILDREN)}
+#define CBOR_KPARSE_ELEMENT_A_BWRAP(KEY, TYPE, CHILDREN, DESC)\
+    {.key = (KEY), 0, .type = (TYPE) >> 5, 0, .bstr_wrap = 1, .is_array = 1, 0, 0, .ptr = (CHILDREN)}
+#define CBOR_KPARSE_ELEMENT_C(KEY, TYPE, CHILDREN, DESC)\
+    {.key = (KEY), 0, .type = (TYPE) >> 5, 0, 0, 0, 0, 0, .ptr = (CHILDREN)}
+#define CBOR_KPARSE_ELEMENT_H(KEY, TYPE, HANDLER, DESC)\
+    {.key = (KEY), 0, .type = (TYPE) >> 5, .has_handler = 1, 0, 0, 0, 0, .ptr = (HANDLER)}
+#define CBOR_KPARSE_ELEMENT_H_BWRAP(KEY, TYPE, HANDLER, DESC)\
+    {.key = (KEY), 0, .type = (TYPE) >> 5, .has_handler = 1, .bstr_wrap = 1, 0, 0, 0, .ptr = (HANDLER)}
 #define CBOR_KPARSE_ELEMENT(KEY, TYPE, HANDLER, DESC)\
-    {.key = (KEY), 0, .type = (TYPE) >> 5, 0, 0, 0, .handler=(HANDLER)}
+    {.key = (KEY), 0, .type = (TYPE) >> 5, 0, 0, 0, .ptr = (HANDLER)}
 #define CBOR_KPARSE_ELEMENT_NULL(KEY, TYPE, HANDLER, DESC)\
-    {.key = (KEY), 0, .type = (TYPE) >> 5, 0, 0, .null_opt = 1, .handler=(HANDLER)}
+    {.key = (KEY), 0, .type = (TYPE) >> 5, 0, 0, .null_opt = 1, .ptr = (HANDLER)}
 #define CBOR_KPARSE_ELEMENT_CHOICE(KEY, TYPE, HANDLER, DESC)\
-    {.key = (KEY), 0, .type = (TYPE) >> 5, 0, .choice = 1, 0, .handler=(HANDLER)}
+    {.key = (KEY), 0, .type = (TYPE) >> 5, 0, .choice = 1, 0, .ptr = (HANDLER)}
 #define PD_PRINTF(...)
 #endif
+
+#define FLEXARRAY_HELPER(STRUCT_TYPE, TYPE, NAME, TMPNAME, ...)\
+    const TYPE TMPNAME [] = { \
+        __VA_ARGS__\
+    };\
+    const struct {\
+        STRUCT_TYPE elements;\
+        TYPE elements_raw [ARRAY_SIZE(TMPNAME)];\
+    } NAME = {{.count = ARRAY_SIZE(TMPNAME)}, { \
+        __VA_ARGS__\
+    }}
+#define FLEXARRAY(STRUCT_TYPE, TYPE, NAME, ...) FLEXARRAY_HELPER(STRUCT_TYPE, TYPE, NAME, _flexarray_ ## NAME ## _tmp, __VA_ARGS__)
+#define CBOR_KPARSE_ELEMENT_LIST(NAME, ...) \
+    FLEXARRAY(cbor_keyed_parse_elements_t, cbor_keyed_parse_element_t, NAME, __VA_ARGS__)
+
+    // int          key:16;
+    // unsigned int resvd:8;
+    // unsigned int type:3;
+    // unsigned int has_handler:1;
+    // unsigned int bstr_wrap:1;
+    // unsigned int repeat:1;
+    // unsigned int choice:1;
+    // unsigned int null_opt:1;
 
 #define PARSE_HANDLER(N)\
     int N( \
@@ -159,55 +283,65 @@ typedef struct cbor_value_s {
         int64_t i64;
         struct {
             const uint8_t *ptr;
-            uint64_t length;
+            uint64_t uival;
         } ref;
         uint8_t primitive;
     };
 } cbor_value_t;
 
-typedef struct suit_vars_s {
-    const uint8_t *vendor_id;
-    const uint8_t *class_id;
-    const uint8_t *device_id;
-    const uint8_t *uri;
-    const uint8_t *encryption_info;
-    const uint8_t *compression_info;
-    const uint8_t *unpack_info;
-    const uint8_t *source_component;
-    const uint8_t *image_digest;
-    const uint8_t *image_size;
-    const uint8_t LAST[0];
-} suit_vars_t;
+typedef struct suit_reference_t {
+    const uint8_t *ptr;
+    const uint8_t *end;
+} suit_reference_t;
+
+
+typedef suit_reference_t suit_vars_t[SUIT_VAR_COUNT];
 
 typedef struct suit_parse_context_s {
-    int64_t search_key;
-    suit_vars_t vars[MAX_COMPONENTS];
-    const uint8_t* outer;
-    const uint8_t* auth;
-    const uint8_t* inner;
-    const uint8_t* common;
-    const uint8_t* search_result;
-    uint16_t outer_size;
-    uint16_t common_size;
+    suit_reference_t envelope;
+    uint8_t manifest_suit_digest[SUIT_SIGNATURE1_PAYLOAD_LEN];
+    union {
+        struct {
+            int64_t search_key;
+            suit_reference_t search_result;
+            suit_vars_t vars[MAX_COMPONENTS];
+            suit_reference_t manifest;
+            suit_reference_t common;
+            size_t current_component;
+        };
+        struct {
+            uint8_t Signature1[SUIT_SIGNATURE1_MAX_LEN];
+            size_t offset;
+            int alg;
+            suit_reference_t kid;
+        } Sign1;
+    };
 } suit_parse_context_t;
 
 typedef PARSE_HANDLER((*suit_handler_t));
 
+struct cbor_keyed_parse_elements_s;
+
 typedef struct cbor_keyed_parse_element_s {
-    int  key:16;
-    unsigned int resvd0:8;
+    int          key:16;
+    unsigned int resvd:6;
     unsigned int type:3;
-    unsigned int resvd1:2;
-    unsigned int repeat:1;
+    unsigned int is_kv:1;
+    unsigned int has_handler:1;
+    unsigned int bstr_wrap:1;
+    unsigned int is_array:1; // array of like items. If 0, list.
     unsigned int choice:1;
     unsigned int null_opt:1;
-    // Defined by cbor_type
-    // int (*extractor)(void* ctx, const uint8_t **p, cbor_value_t *val, const uint8_t *end);
-    suit_handler_t handler;
+    const void* ptr;
 #ifdef PARSER_DEBUG
     const char* desc;
 #endif
 } cbor_keyed_parse_element_t;
+
+typedef struct cbor_keyed_parse_elements_s {
+    size_t count;
+    cbor_keyed_parse_element_t elements[];
+} cbor_keyed_parse_elements_t;
 
 int suit_do_process_manifest(const uint8_t *manifest, size_t manifest_size);
 int suit_platform_do_run();
@@ -243,6 +377,14 @@ int verify_suit_digest(
     size_t data_len);
 
 int cbor_skip(const uint8_t **p, const uint8_t *end);
+int COSEAuthVerify(
+                const uint8_t *msg, size_t msg_len,
+                const uint8_t *sig, size_t sig_len,
+                const uint8_t *kid, size_t kid_len,
+                int alg);
+
+int suit_platform_verify_digest(int alg, const uint8_t *exp, size_t exp_len, const uint8_t *data, size_t data_len);
+
 #ifdef __cplusplus
 }
 #endif

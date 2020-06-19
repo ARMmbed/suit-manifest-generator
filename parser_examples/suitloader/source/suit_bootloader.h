@@ -32,6 +32,9 @@ typedef struct entrypoint_s {
     const uintptr_t manifest;
 } entrypoint_t;
 
+extern const uint8_t public_key[];
+extern const uint8_t class_id[16];
+extern const uint8_t vendor_id[16];
 extern const entrypoint_t entrypoints [];
 extern const size_t n_entrypoints;
 int suit_bootloader();
