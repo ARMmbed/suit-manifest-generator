@@ -109,14 +109,12 @@ int suit_platform_verify_digest(int alg, const uint8_t *exp, size_t exp_len, con
 int ES256_verify(
                 const uint8_t *msg, size_t msg_len,
                 const uint8_t *sig, size_t sig_len,
-                const uint8_t *kid, size_t kid_len)
+                const uint8_t *pub, size_t pub_len)
 {
     //TODO: SHA
     uint8_t hash[32] = {0};
     compute_sha256(hash, msg, msg_len);
-
-    //TODO: Lookup public key by key-id
-    if (uECC_verify(public_key, hash, sig)) {
+    if (uECC_verify(pub, hash, sig)) {
         return CBOR_ERR_NONE;
     }
     else {
@@ -131,12 +129,13 @@ int COSEAuthVerify(
                 int alg)
 {
     int rc;
+    //TODO: Lookup public key by key-id
     switch (alg) {
         case COSE_ES256:
             rc = ES256_verify(
                 msg, msg_len,
                 sig, sig_len,
-                kid, kid_len);
+                public_key, public_key_size);
             break;
         default:
             SET_ERROR(rc, CBOR_ERR_UNIMPLEMENTED);

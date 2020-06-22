@@ -49,6 +49,8 @@ const uint8_t public_key[] = {
     0x39, 0x91, 0xdb, 0x73, 0x38, 0xb4, 0xa8, 0x96,
 };
 
+const size_t public_key_size = sizeof(public_key);
+
 const entrypoint_t entrypoints[] = {
     {
         SUIT_BOOTLOADER_SLOT_A_OFFSET + SUIT_BOOTLOADER_HEADER_SIZE,
