@@ -183,12 +183,14 @@
     {.key = (KEY), 0, .type = (TYPE) >> 5, .has_handler = 1, 0, 0, 0, 0, .ptr = (HANDLER), .desc=(DESC)}
 #define CBOR_KPARSE_ELEMENT_H_BWRAP(KEY, TYPE, HANDLER, DESC)\
     {.key = (KEY), 0, .type = (TYPE) >> 5, .has_handler = 1, .bstr_wrap = 1, 0, 0, 0, .ptr = (HANDLER), .desc=(DESC)}
+#define CBOR_KPARSE_ELEMENT_EX(KEY, TYPE, VAL, DESC)\
+    {.key = (KEY), 0, .type = (TYPE) >> 5, 0, 0, 0, .extract = 1, 0, .ptr = (VAL), .desc=(DESC)}
+#define CBOR_KPARSE_ELEMENT_EX_BWRAP(KEY, TYPE, VAL, DESC)\
+    {.key = (KEY), 0, .type = (TYPE) >> 5, 0, .bstr_wrap = 1, 0, .extract = 1, 0, .ptr = (VAL), .desc=(DESC)}
 #define CBOR_KPARSE_ELEMENT(KEY, TYPE, HANDLER, DESC)\
     {.key = (KEY), 0, .type = (TYPE) >> 5, 0, 0, 0, .ptr=(HANDLER), .desc=(DESC)}
 #define CBOR_KPARSE_ELEMENT_NULL(KEY, TYPE, HANDLER, DESC)\
     {.key = (KEY), 0, .type = (TYPE) >> 5, 0, 0, .null_opt = 1, .ptr=(HANDLER), .desc=(DESC)}
-#define CBOR_KPARSE_ELEMENT_CHOICE(KEY, TYPE, HANDLER, DESC)\
-    {.key = (KEY), 0, .type = (TYPE) >> 5, 0, .choice = 1, 0, .ptr=(HANDLER), .desc=(DESC)}
 #define PD_PRINTF(...)\
     printf(__VA_ARGS__)
 #else
@@ -204,12 +206,14 @@
     {.key = (KEY), 0, .type = (TYPE) >> 5, .has_handler = 1, 0, 0, 0, 0, .ptr = (HANDLER)}
 #define CBOR_KPARSE_ELEMENT_H_BWRAP(KEY, TYPE, HANDLER, DESC)\
     {.key = (KEY), 0, .type = (TYPE) >> 5, .has_handler = 1, .bstr_wrap = 1, 0, 0, 0, .ptr = (HANDLER)}
+#define CBOR_KPARSE_ELEMENT_EX(KEY, TYPE, VAL, DESC)\
+    {.key = (KEY), 0, .type = (TYPE) >> 5, 0, 0, 0, .extract = 1, 0, .ptr = (VAL)}
+#define CBOR_KPARSE_ELEMENT_EX_BWRAP(KEY, TYPE, VAL, DESC)\
+    {.key = (KEY), 0, .type = (TYPE) >> 5, 0, .bstr_wrap = 1, 0, .extract = 1, 0, .ptr = (VAL)}
 #define CBOR_KPARSE_ELEMENT(KEY, TYPE, HANDLER, DESC)\
     {.key = (KEY), 0, .type = (TYPE) >> 5, 0, 0, 0, .ptr = (HANDLER)}
 #define CBOR_KPARSE_ELEMENT_NULL(KEY, TYPE, HANDLER, DESC)\
     {.key = (KEY), 0, .type = (TYPE) >> 5, 0, 0, .null_opt = 1, .ptr = (HANDLER)}
-#define CBOR_KPARSE_ELEMENT_CHOICE(KEY, TYPE, HANDLER, DESC)\
-    {.key = (KEY), 0, .type = (TYPE) >> 5, 0, .choice = 1, 0, .ptr = (HANDLER)}
 #define PD_PRINTF(...)
 #endif
 
@@ -330,7 +334,7 @@ typedef struct cbor_keyed_parse_element_s {
     unsigned int has_handler:1;
     unsigned int bstr_wrap:1;
     unsigned int is_array:1; // array of like items. If 0, list.
-    unsigned int choice:1;
+    unsigned int extract:1;
     unsigned int null_opt:1;
     const void* ptr;
 #ifdef PARSER_DEBUG

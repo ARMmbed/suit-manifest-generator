@@ -223,15 +223,15 @@ int cbor_skip(const uint8_t **p, const uint8_t *end)
     return rc;
 }
 
-int get_handler(
+static int get_handler(
     const uint8_t cbor_b1,
     const uint8_t cbor_sub,
-    const int32_t key,
-    const cbor_keyed_parse_elements_t* handlers
+    const cbor_keyed_parse_element_t** h,
+    const cbor_keyed_parse_elements_t* handlers,
+    const int32_t key
 ) {
     size_t i;
     // Step 1: find the first key that matches
-    // Find a matching key
     int success = 0;
     for (i = 0; i < handlers->count; i++)
     {
@@ -243,36 +243,34 @@ int get_handler(
 
     if (!success ) {
         PD_PRINTF("Couldn't find a handler for key %d\n", (int) key);
-        RETURN_ERROR(-CBOR_ERR_KEY_MISMATCH);
+        RETURN_ERROR(CBOR_ERR_KEY_MISMATCH);
     }
     // PD_PRINTF("Key Matched, Matching major %u, sub:%u\n", (unsigned) cbor_b1>>5, (unsigned)cbor_sub >> 5);
-
+    // Step 2: Loop through handlers until a matching handler is found or a key mismatch is found
+    // const cbor_keyed_parse_element_t* h;
     for (; i < handlers->count && handlers->elements[i].key == key; i++) {
-        uint8_t cbor_type = (cbor_b1 & CBOR_TYPE_MASK);
-        if (handlers->elements[i].bstr_wrap) {
-            if (cbor_type != CBOR_TYPE_BSTR) {
+    // do {
+        uint8_t cbor_type = (cbor_b1 & CBOR_TYPE_MASK) >> 5;
+        *h = &handlers->elements[i];
+        if ((*h)->bstr_wrap) {
+            if (cbor_type != CBOR_TYPE_BSTR >> 5) {
                 continue;
             }
             cbor_type = cbor_sub & CBOR_TYPE_MASK;
         }
-        if (handlers->elements[i].type << 5 == CBOR_TYPE_NINT &&
-            cbor_type == CBOR_TYPE_UINT)
+        if ((*h)->type == cbor_type) {
+            return CBOR_ERR_NONE;
+        }
+        if (cbor_type == CBOR_TYPE_UINT >> 5 && (*h)->type == CBOR_TYPE_NINT >> 5)
         {
-            return (int)i;
+            return CBOR_ERR_NONE;
         }
-        if (handlers->elements[i].type << 5 == cbor_type) {
-            return (int)i;
+        if ((*h)->null_opt && cbor_b1 == CBOR_NULL) {
+            return CBOR_ERR_NONE;
         }
-        if (handlers->elements[i].null_opt && cbor_b1 == CBOR_NULL) {
-            return (int)i;
-        }
-        if (!handlers->elements[i].choice) {
-            PD_PRINTF("Type Mismatch\n");
-            RETURN_ERROR(-CBOR_ERR_TYPE_MISMATCH);
-        }
-    }
+    } // while (++i < handlers->count && (*h)->key == key);
     PD_PRINTF("Type Mismatch\n");
-    RETURN_ERROR(-CBOR_ERR_TYPE_MISMATCH);
+    RETURN_ERROR(CBOR_ERR_TYPE_MISMATCH);
 }
 static int handle_array(
     const uint8_t** p,
@@ -302,7 +300,12 @@ static int handle_tag(
     const cbor_keyed_parse_elements_t *handlers
 );
 
-//TODO: Optimize me!
+/**
+ * 
+ * Step 1: get the handler.
+ * Step 2: Unwrap if bstr-wrapped.
+ * Step 3: Invoke the appropriate handler.
+ */
 static int handle_keyed_element(
     const uint8_t** p,
     const uint8_t* end,
@@ -310,6 +313,7 @@ static int handle_keyed_element(
     const cbor_keyed_parse_elements_t *handlers,
     int32_t key
 ) {
+    // TODO: Add pre-call-function?
     PD_PRINTF("parse offset: %zu, key: %" PRIi64 "\n", (size_t)((*p)-ctx->envelope.ptr), key);
 
     cbor_value_t val;
@@ -324,14 +328,12 @@ static int handle_keyed_element(
     // PD_PRINTF("Extract done\r\n");
     uint8_t cbor_sub = **p;
 
-    rc = get_handler(cbor_b1, cbor_sub, key, handlers);
-    if (rc < 0) {
-        rc = -rc;
+    const cbor_keyed_parse_element_t *handler;
+    rc = get_handler(cbor_b1, cbor_sub, &handler, handlers, key);
+    if (rc != CBOR_ERR_NONE) {
         return rc;
     }
-    size_t handler_index = rc;
     // PD_PRINTF("Selected handler %zu", handler_index);
-    const cbor_keyed_parse_element_t *handler = &(handlers->elements[handler_index]);
     PD_PRINTF("%s\n", handler->desc);
 
     uint8_t cbor_type = cbor_b1 & CBOR_TYPE_MASK;
@@ -354,6 +356,9 @@ static int handle_keyed_element(
         PD_PRINTF("Skipping...\n");
         *p = val.cbor_start;
         rc = cbor_skip(p, end);
+    }
+    else if (handler->extract) {
+        memcpy((void *)handler->ptr, &val, sizeof(cbor_value_t));
     }
     else if (handler->has_handler) {
         suit_handler_t handler_fn = (suit_handler_t) handler->ptr;
@@ -625,30 +630,21 @@ PARSE_HANDLER(class_match_handler)
     return check_id(key, class_id, ctx, SUIT_MFST_ERR_CLASS_MISMATCH);
 }
 
+static cbor_value_t exp_digest_alg;
+static cbor_value_t exp_digest;
+CBOR_KPARSE_ELEMENT_LIST(suit_digest_elements,
+    CBOR_KPARSE_ELEMENT_EX(0, CBOR_TYPE_NINT, &exp_digest_alg, "SUIT Digest Algorithm"),
+    CBOR_KPARSE_ELEMENT_EX(1, CBOR_TYPE_BSTR, &exp_digest, "SUIT Digest Bytes"),
+);
 int suit_check_digest(suit_reference_t* expected_digest, const uint8_t *data, size_t data_len)
 {
     const uint8_t *p = expected_digest->ptr;
     const uint8_t *end = expected_digest->end;
-    cbor_value_t val;
-    int rc = CBOR_ERR_NONE;
-    switch(*p & CBOR_TYPE_MASK) {
-        case CBOR_TYPE_BSTR:
-            rc = rc ? rc : cbor_check_type_extract_ref(&p, end, &val, CBOR_TYPE_BSTR);
-        case CBOR_TYPE_LIST:
-            rc = rc ? rc : cbor_check_type_extract_ref(&p, end, &val, CBOR_TYPE_LIST);
-            break;
-        default:
-            rc = CBOR_ERR_TYPE_MISMATCH;
-            break;
+    int rc = suit_process_kv(&p, end, NULL, &suit_digest_elements.elements, CBOR_TYPE_LIST);
+    if (rc != CBOR_ERR_NONE) {
+        return rc;
     }
-    int64_t alg;
-    if (rc == CBOR_ERR_NONE && val.ref.uival < 2) {
-        rc = SUIT_MFST_ERR_MANIFEST_ENCODING;
-    }
-    rc = rc ? rc : cbor_get_int64(&p, expected_digest->end, &alg);
-    rc = rc ? rc : cbor_check_type_extract_ref(&p, expected_digest->end, &val, CBOR_TYPE_BSTR);
-    rc = rc ? rc : suit_platform_verify_digest(alg, val.ref.ptr, val.ref.uival, data, data_len);
-    return rc;
+    return suit_platform_verify_digest(exp_digest_alg.i64, exp_digest.ref.ptr, exp_digest.ref.uival, data, data_len);
 }
 
 
