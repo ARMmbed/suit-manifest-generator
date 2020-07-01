@@ -427,19 +427,20 @@ class SUITParameters(SUITManifestDict):
         'size' : ('image-size', 14, SUITPosInt),
         'uri' : ('uri', 21, SUITTStr),
         'src' : ('source-component', 22, SUITComponentIndex),
-        'compress' : ('compression-info', 19, SUITCompressionInfo)
+        'compress' : ('compression-info', 19, SUITCompressionInfo),
+        'offset' : ('offset', 5, SUITPosInt)
     })
     def from_json(self, j):
-        # print(j)
         return super(SUITParameters, self).from_json(j)
 
 class SUITTryEach(SUITManifestArray):
     pass
 
-def SUITCommandContainer(jkey, skey, argtype):
+def SUITCommandContainer(jkey, skey, argtype, dp=[]):
     class SUITCmd(SUITCommand):
         json_key = jkey
         suit_key = skey
+        dep_params = dp
         def __init__(self):
             pass
         def to_suit(self):
@@ -483,11 +484,11 @@ class SUITCommand:
         return self.scommands[s[0]]().from_suit(s)
 
 SUITCommand.commands = [
-    SUITCommandContainer('condition-vendor-identifier',    1,  SUITNil),
-    SUITCommandContainer('condition-class-identifier',     2,  SUITNil),
-    SUITCommandContainer('condition-image-match',          3,  SUITNil),
+    SUITCommandContainer('condition-vendor-identifier',    1,  SUITNil, ['vendor-id']),
+    SUITCommandContainer('condition-class-identifier',     2,  SUITNil, ['class-id']),
+    SUITCommandContainer('condition-image-match',          3,  SUITNil, ['digest']),
     SUITCommandContainer('condition-use-before',           4,  SUITNil),
-    SUITCommandContainer('condition-component-offset',     5,  SUITNil),
+    SUITCommandContainer('condition-component-offset',     5,  SUITNil, ['offset']),
     SUITCommandContainer('condition-device-identifier',    24, SUITNil),
     SUITCommandContainer('condition-image-not-match',      25, SUITNil),
     SUITCommandContainer('condition-minimum-battery',      26, SUITNil),
