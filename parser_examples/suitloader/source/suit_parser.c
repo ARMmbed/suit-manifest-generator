@@ -636,11 +636,18 @@ CBOR_KPARSE_ELEMENT_LIST(suit_digest_elements,
     CBOR_KPARSE_ELEMENT_EX(0, CBOR_TYPE_NINT, &exp_digest_alg, "SUIT Digest Algorithm"),
     CBOR_KPARSE_ELEMENT_EX(1, CBOR_TYPE_BSTR, &exp_digest, "SUIT Digest Bytes"),
 );
+CBOR_KPARSE_ELEMENT_LIST(suit_digest_container,
+    CBOR_KPARSE_ELEMENT_C(0, CBOR_TYPE_LIST, &suit_digest_elements, "SUIT Digest"),
+    CBOR_KPARSE_ELEMENT_C_BWRAP(0, CBOR_TYPE_LIST, &suit_digest_elements, "SUIT Digest Wrapped"),
+);
+
+
 int suit_check_digest(suit_reference_t* expected_digest, const uint8_t *data, size_t data_len)
 {
     const uint8_t *p = expected_digest->ptr;
     const uint8_t *end = expected_digest->end;
-    int rc = suit_process_kv(&p, end, NULL, &suit_digest_elements.elements, CBOR_TYPE_LIST);
+    int rc = handle_keyed_element(&p, end, NULL, &suit_digest_container.elements, 0);
+    // int rc = suit_process_kv(&p, end, NULL, &suit_digest_elements.elements, CBOR_TYPE_LIST);
     if (rc != CBOR_ERR_NONE) {
         return rc;
     }
