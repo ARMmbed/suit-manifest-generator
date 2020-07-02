@@ -100,12 +100,26 @@ def make_sequence(cid, choices, seq, params, cmds, pcid_key=None, param_drctv='d
     TryEachCmd = SUITTryEach()
     for c in choices:
         TECseq = TryEachCmd.field.obj().from_json([])
-        for item, cmd in neqcmds.items():
-            TECseq.v.append(cmd(cid, c))
         params = {}
         for param, pcmd in neqparams.items():
             k,v = pcmd(cid, c)
             params[k] = v
+        dep_params = {}
+        TECseq_cmds = []
+        for item, cmd in neqcmds.items():
+            ncmd = cmd(cid, c)
+            for dp in ncmd.dep_params:
+                if dp in params:
+                    dep_params[dp] = params[dp]
+                    del params[dp]
+            TECseq_cmds.append(ncmd)
+
+        if len(dep_params):
+            TECseq.v.append(mkCommand(pcid, param_drctv, dep_params))
+        
+        for cmd in TECseq_cmds:
+            TECseq.v.append(cmd)
+
         if len(params):
             TECseq.v.append(mkCommand(pcid, param_drctv, params))
         if hasattr(TECseq, "v") and len(TECseq.v.items):
