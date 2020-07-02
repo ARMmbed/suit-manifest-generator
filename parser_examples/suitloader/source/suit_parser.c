@@ -256,7 +256,7 @@ static int get_handler(
             if (cbor_type != CBOR_TYPE_BSTR >> 5) {
                 continue;
             }
-            cbor_type = cbor_sub & CBOR_TYPE_MASK;
+            cbor_type = (cbor_sub & CBOR_TYPE_MASK) >> 5;
         }
         if ((*h)->type == cbor_type) {
             return CBOR_ERR_NONE;
