@@ -30,7 +30,7 @@ from cryptography.hazmat.primitives import serialization as ks
 import pyhsslms
 
 from suit_tool.manifest import COSE_Sign1, COSEList, SUITDigest,\
-                               SUITWrapper, SUITBytes, SUITBWrapField
+                               SUITEnvelope, SUITBytes, SUITBWrapField
 import logging
 import binascii
 LOG = logging.getLogger(__name__)
@@ -86,7 +86,7 @@ def main(options):
             LOG.critical('Non-library key type not implemented')
             return 1
 
-    digest.update(cbor.dumps(wrapper[SUITWrapper.fields['manifest'].suit_key]))
+    digest.update(cbor.dumps(wrapper[SUITEnvelope.fields['manifest'].suit_key]))
 
     cose_signature = COSE_Sign1().from_json({
         'protected' : {
@@ -121,7 +121,7 @@ def main(options):
         'COSE_Sign1_Tagged' : cose_signature.to_json()
     }])
 
-    wrapper[SUITWrapper.fields['auth'].suit_key] = auth.to_suit()
+    wrapper[SUITEnvelope.fields['auth'].suit_key] = auth.to_suit()
 
     options.output_file.write(cbor.dumps(wrapper, sort_keys=True))
     return 0

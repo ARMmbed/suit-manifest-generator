@@ -35,7 +35,7 @@ from cryptography.hazmat.primitives import hashes
 
 from suit_tool.manifest import SUITComponentId, SUITCommon, SUITSequence, \
                      suitCommonInfo, SUITCommand, SUITManifest, \
-                     SUITWrapper, SUITTryEach, SUITBWrapField
+                     SUITEnvelope, SUITTryEach, SUITBWrapField
 
 LOG = logging.getLogger(__name__)
 
@@ -315,5 +315,13 @@ def compile_manifest(options, m):
             'load' : LoadSeq.to_json()
     }.items() if v})
 
-    wrapped_manifest = SUITWrapper().from_json({'manifest' : jmanifest})
+    
+
+    text = SUITText().from_json({
+        'manifest-description'
+    })
+
+    wrapped_manifest = SUITEnvelope().from_json({'manifest' : jmanifest})
+    
+    wrapped_manifest
     return wrapped_manifest

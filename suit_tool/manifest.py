@@ -671,7 +671,60 @@ class COSEList(SUITManifestArray):
     def from_suit(self, data):
         return super(COSEList, self).from_suit(data)
 
-class SUITWrapper(SUITManifestDict):
+class SUITComponentText(SUITManifestDict):
+    fields = SUITManifestDict.mkfields({
+        'vendorname' : ('vendor-name', 1, SUITTStr),
+        'modelname' : ('model-name', 2, SUITTStr),
+        'vendordomain' : ('vendor-domain', 3, SUITTStr),
+        'modelinfo' : ('json-source', 4, SUITTStr),
+        'cdesc' : ('component-description', 5, SUITTStr),
+        'version' : ('version', 6, SUITTStr),
+        'reqversion' : ('required-version', 7, SUITTStr),
+    })
+
+class SUITText(SUITManifestDict):
+    fields = SUITManifestDict.mkfields({
+        'mdesc' : ('manifest-description', 1, SUITTStr),
+        'udesc' : ('update-description', 2, SUITTStr),
+        'json' : ('json-source', 3, SUITTStr),
+        'yaml' : ('yaml-source', 4, SUITTStr),
+    })
+    components={}
+
+    def to_json(self):
+        d = super(SUITText, self).to_json()
+        d.update({k.to_json() : v.to_json() for k,v in self.components.items()})
+        return d
+
+    def from_json(self, data):
+        for k,v in data.items():
+            if not isinstance(str):
+                self.components[SUITComponentId().from_json(k)] = SUITComponentText().from_json(v)
+        return super(SUITText, self).from_json(data)
+
+    def to_suit(self):
+        d = super(SUITText, self).to_suit()
+        d.update({k.to_suit() : v.to_suit() for k,v in self.components.items()})
+        return d
+
+    def from_suit(self, data):
+        for k,v in data.items():
+            if not isinstance(str):
+                self.components[SUITComponentId().from_suit(k)] = SUITComponentText().from_suit(v)
+        return super(SUITText, self).from_json(data)
+    
+    def to_debug(self, indent):
+        s = super(SUITText, self).to_debug(indent)
+        for k, f in self.components.items():
+
+            if hasattr(self, k):
+                v = getattr(self, k)
+                newindent = indent + one_indent
+                s = '{tag}({value})'.format(tag=f.suit_key, value=v.to_debug(newindent))
+        return s
+
+
+class SUITEnvelope(SUITManifestDict):
     fields = SUITManifestDict.mkfields({
         'auth' : ('authentication-wrapper', 2, SUITBWrapField(COSEList)),
         'manifest' : ('manifest', 3, SUITBWrapField(SUITManifest)),
@@ -681,7 +734,7 @@ class SUITWrapper(SUITManifestDict):
         'validate': ('validate', 10, SUITBWrapField(SUITSequence)),
         'load': ('load', 11, SUITBWrapField(SUITSequence)),
         'run': ('run', 12, SUITBWrapField(SUITSequence)),
-        # 'text': ('text', 13, SUITBWrapField(SUITSequence)),
+        'text': ('text', 13, SUITBWrapField(SUITText)),
     })
     severable_fields = {'deres', 'fetch', 'install'} #, 'text'}
     digest_algorithms = {
