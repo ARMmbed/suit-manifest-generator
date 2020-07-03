@@ -197,6 +197,7 @@ def compile_manifest(options, m):
         if any([c.get('install-on-download', True) and 'uri' in c for c in choices]):
             InstParams = {
                 'uri' : lambda cid, data: ('uri', data['uri']),
+                'offset' : lambda cid, data: ('offset', data['offset']),
             }
             if any(['compression-info' in c and not c.get('decompress-on-load', False) for c in choices]):
                 InstParams['compression-info'] = lambda cid, data: data.get('compression-info')
@@ -212,7 +213,8 @@ def compile_manifest(options, m):
             FetchParams = {
                 'uri' : lambda cid, data: ('uri', data['uri']),
                 'download-digest' : lambda cid, data : (
-                    'image-digest', data.get('download-digest', data['install-digest']))
+                    'image-digest', data.get('download-digest', data['install-digest'])),
+                'offset' : lambda cid, data: ('offset', data['offset']),
             }
             if any(['compression-info' in c and not c.get('decompress-on-load', False) for c in choices]):
                 FetchParams['compression-info'] = lambda cid, data: data.get('compression-info')
