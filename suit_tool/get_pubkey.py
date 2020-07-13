@@ -18,7 +18,7 @@
 # ----------------------------------------------------------------------------
 import textwrap
 import binascii
-import pyhsslms
+# import pyhsslms
 
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.asymmetric import ec
@@ -47,11 +47,11 @@ OutputFormaters = {
     'uecc' : to_uecc_pubkey,
     'pem' : lambda pk: pk.public_key().public_bytes(ks.Encoding.PEM, ks.PublicFormat.SubjectPublicKeyInfo),
     'der' : lambda pk: pk.public_key().public_bytes(ks.Encoding.DER, ks.PublicFormat.SubjectPublicKeyInfo),
-    'hsslms' : lambda pk: pk.publicKey().serialize(),
-    'c-hsslms' : lambda pk: ('\n    '.join(['const uint8_t hsslms_public_key[] = {'] + textwrap.wrap(
-        ', '.join(['{:0=#4x}'.format(x) for x in pk.publicKey().serialize()]),
-        76
-    )) + '\n};\n').encode('utf-8')
+    # 'hsslms' : lambda pk: pk.publicKey().serialize(),
+    # 'c-hsslms' : lambda pk: ('\n    '.join(['const uint8_t hsslms_public_key[] = {'] + textwrap.wrap(
+    #     ', '.join(['{:0=#4x}'.format(x) for x in pk.publicKey().serialize()]),
+    #     76
+    # )) + '\n};\n').encode('utf-8')
 }
 
 
@@ -64,8 +64,8 @@ def main(options):
             password=None,
             backend=default_backend()
         )
-    elif options.output_format in ('c-hsslms', 'hsslms'):
-        private_key = pyhsslms.HssPrivateKey.deserialize(options.private_key.read())
+    # elif options.output_format in ('c-hsslms', 'hsslms'):
+    #     private_key = pyhsslms.HssPrivateKey.deserialize(options.private_key.read())
 
     odata = OutputFormaters.get(options.output_format)(private_key)
 

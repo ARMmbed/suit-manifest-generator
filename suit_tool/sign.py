@@ -79,8 +79,8 @@ def main(options):
     except:
         try:
             digest = hashes.Hash(hashes.SHA256(), backend=default_backend())
-            private_key = pyhsslms.HssPrivateKey.deserialize(private_key_buffer)
-            options.key_type = 'HSS-LMS'
+            # private_key = pyhsslms.HssPrivateKey.deserialize(private_key_buffer)
+            # options.key_type = 'HSS-LMS'
         except:
             # private_key = None
             # TODO: Implement loading of DSA keys not supported by python cryptography
