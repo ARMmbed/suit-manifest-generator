@@ -23,20 +23,20 @@ import itertools
 import textwrap
 from collections import OrderedDict
 
+from suit_tool.manifest import SUITEnvelope
 def main(options):
-    m = json.loads(options.input_file.read(), object_pairs_hook=OrderedDict)
+    # Read the manifest wrapper
+    envelope = cbor.loads(options.manifest.read())
 
-    nm = compile_manifest(options, m)
-    print('create done. Serializing')
-    if m.get('severable') or (hasattr(options, 'severable') and options.severable):
-        nm = nm.to_severable('sha256')
-    output = {
-        'suit' : lambda x: cbor.dumps(x.to_suit(), canonical=True),
-        'suit-debug' : lambda x: '\n'.join(itertools.chain.from_iterable(
-            map(textwrap.wrap, x.to_debug('').split('\n'))
-        )).encode('utf-8'),
-        'json' : lambda x : json.dumps(x.to_json(), indent=2).encode('utf-8')
-    }.get(options.format)(nm)
+    if hasattr(options, 'all'):
+        options.elements = SUITEnvelope.severable_fields
+
+    for e in options.elements:
+        eid = SUITEnvelope.fields[e].suit_key
+        if eid in envelope:
+            del(envelope[eid])
+
+    output = cbor.dumps(envelope, canonical=True)
     options.output_file.write(output)
 
     return 0

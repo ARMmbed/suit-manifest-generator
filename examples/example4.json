@@ -1,7 +1,10 @@
 {
     "components" : [
         {
+            "download-id" : ["02"],
+            "install-on-download" : false,
             "install-id" : ["00"],
+
             "install-digest": {
                 "algorithm-id": "sha256",
                 "digest-bytes": "00112233445566778899aabbccddeeff0123456789abcdeffedcba9876543210"
@@ -14,9 +17,14 @@
             "loadable" : true,
             "decompress-on-load" : true,
             "load-id" : ["01"],
+            "load-digest" : {
+                "algorithm-id": "sha256",
+                "digest-bytes": "0123456789abcdeffedcba987654321000112233445566778899aabbccddeeff"
+            },
+            "load-size" : 76834,
             "compression-info" : "gzip"
         }
     ],
     "manifest-version": 1,
-    "manifest-sequence-number": 5
+    "manifest-sequence-number": 4
 }
