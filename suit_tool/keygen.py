@@ -23,7 +23,7 @@ from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives.asymmetric import utils as asymmetric_utils
 from cryptography.hazmat.primitives import serialization as ks
 
-import pyhsslms
+# import pyhsslms
 
 import logging
 import binascii
@@ -36,13 +36,13 @@ KeyGenerators = {
     'secp384r1' : lambda o: ec.generate_private_key(ec.SECP384R1(), default_backend()),
     'secp521r1' : lambda o: ec.generate_private_key(ec.SECP521R1(), default_backend()),
     'ed25519' : lambda o: ed25519.Ed25519PrivateKey.generate(),
-    'hsslms' : lambda o: pyhsslms.HssPrivateKey(levels=o.levels, lms_type=pyhsslms.lms_sha256_m32_h5,
-               lmots_type=pyhsslms.lmots_sha256_n32_w8),
+    # 'hsslms' : lambda o: pyhsslms.HssPrivateKey(levels=o.levels, lms_type=pyhsslms.lms_sha256_m32_h5,
+    #            lmots_type=pyhsslms.lmots_sha256_n32_w8),
 }
 OutputFormaters = {
     'pem' : lambda pk: pk.private_bytes(ks.Encoding.PEM, ks.PrivateFormat.PKCS8, ks.NoEncryption()),
     'der' : lambda pk: pk.private_bytes(ks.Encoding.DER, ks.PrivateFormat.PKCS8, ks.NoEncryption()),
-    'c-hss-lms' : lambda pk: pk.serialize(),
+    # 'c-hss-lms' : lambda pk: pk.serialize(),
 }
 
 def main(options):
