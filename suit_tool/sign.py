@@ -27,7 +27,7 @@ from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives.asymmetric import utils as asymmetric_utils
 from cryptography.hazmat.primitives import serialization as ks
 
-import pyhsslms
+# import pyhsslms
 
 from suit_tool.manifest import COSE_Sign1, COSEList, SUITDigest,\
                                SUITEnvelope, SUITBytes, SUITBWrapField, \
@@ -46,13 +46,13 @@ def get_cose_es_bytes(options, private_key, sig_val):
 def get_cose_ed25519_bytes(options, private_key, sig_val):
     return private_key.sign(sig_val)
 
-def get_hsslms_bytes(options, private_key, sig_val):
-    sig = private_key.sign(sig_val)
-    key_file_name = options.private_key.name
-    options.private_key.close()
-    with open(key_file_name, 'wb') as fd:
-        fd.write(private_key.serialize())
-    return sig
+# def get_hsslms_bytes(options, private_key, sig_val):
+#     sig = private_key.sign(sig_val)
+#     key_file_name = options.private_key.name
+#     options.private_key.close()
+#     with open(key_file_name, 'wb') as fd:
+#         fd.write(private_key.serialize())
+#     return sig
 
 def main(options):
     # Read the manifest wrapper
@@ -113,7 +113,7 @@ def main(options):
         'ES384' : get_cose_es_bytes,
         'ES512' : get_cose_es_bytes,
         'EdDSA' : get_cose_ed25519_bytes,
-        'HSS-LMS' : get_hsslms_bytes,
+        # 'HSS-LMS' : get_hsslms_bytes,
     }.get(options.key_type)(options, private_key, Sig_structure)
 
     cose_signature.signature = SUITBytes().from_suit(signature_bytes)
