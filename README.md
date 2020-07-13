@@ -120,7 +120,7 @@ The `digest-bytes` is a string of either hex- or base64-encoded bytes. The same 
             "load-digest" : {
                 "algorithm-id": "sha256",
                 "digest-bytes": "0011223344556677889901234567899876543210aabbccddeeffabcdeffedcba"
-            },
+            }
         },
         {
             "install-id" : ["03", "01"],
