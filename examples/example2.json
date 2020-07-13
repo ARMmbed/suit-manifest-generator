@@ -7,12 +7,20 @@
                 "digest-bytes": "00112233445566778899aabbccddeeff0123456789abcdeffedcba9876543210"
             },
             "install-size" : 34768,
-            "uri": "http://example.com/file.bin",
+            "uri": "http://example.com/very/long/path/to/file/file.bin",
             "vendor-id" : "fa6b4a53-d5ad-5fdf-be9d-e663e4d41ffe",
             "class-id" : "1492af14-2569-5e48-bf42-9b2d51f2ab45",
-            "bootable" : true
+            "bootable" : true,
+            "component-description" : "This component is a demonstration. The digest is a sample pattern, not a real one.",
+            "component-version" : "v1.0.1",
+            "vendor-domain" : "arm.com",
+            "model-info" : "suit"
         }
     ],
     "manifest-version": 1,
-    "manifest-sequence-number": 3
+    "manifest-sequence-number": 2,
+    "reference-uri" : "https://git.io/JJYoj",
+    "manifest-description": "## Example 2: Simultaneous Download, Installation, Secure Boot, Severed Fields\n\n    This example covers the following templates:\n    \n    * Compatibility Check ({{template-compatibility-check}})\n    * Secure Boot ({{template-secure-boot}})\n    * Firmware Download ({{firmware-download-template}})\n    \n    This example also demonstrates severable elements ({{ovr-severable}}), and text ({{manifest-digest-text}}).",
+    "severable" : true,
+    "include-json" : true
 }

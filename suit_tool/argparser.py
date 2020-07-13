@@ -86,6 +86,12 @@ class MainArgumentParser(object):
         keygen_parser.add_argument('-f', '--output-format', choices=keygen.OutputFormaters.keys(), default='pem')
         keygen_parser.add_argument('-l', '--levels', help='The number of hss-lms levels', type=int, default=2)
 
+        sever_parser = subparsers.add_parser('sever', help='Remove one or more severable elements from the manifest, if present.')
+        sever_parser.add_argument('-m', '--manifest', metavar='FILE', type=argparse.FileType('rb'), required=True)
+        sever_parser.add_argument('-o', '--output-file', metavar='FILE', type=argparse.FileType('wb'), required=True)
+        sever_parser.add_argument('-e', '--element', action='append', type=str, dest='elements', default=[])
+        sever_parser.add_argument('-a', '--all', action='store_true', default=False)
+
         return parser
 
 

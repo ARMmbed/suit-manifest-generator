@@ -18,7 +18,7 @@
 # ----------------------------------------------------------------------------
 import collections
 import binascii
-import cbor
+import cbor2 as cbor
 import json
 import copy
 import uuid
@@ -41,6 +41,8 @@ ManifestKey = collections.namedtuple(
     ]
 )
 def to_bytes(s):
+    if isinstance(s,bytes):
+        return s
     try:
         return binascii.a2b_hex(s)
     except:
@@ -49,8 +51,6 @@ def to_bytes(s):
         except:
             if isinstance(s,str):
                 return s.encode('utf-8')
-            elif isinstance(s,bytes):
-                return s
             else:
                 return str(s).encode('utf-8')
 
@@ -63,13 +63,17 @@ class SUITException(Exception):
 class SUITCommonInformation:
     def __init__(self):
         self.component_ids = []
+        self.dependencies = []
         self.current_index = 0
         self.indent_size = 4
     def component_id_to_index(self, cid):
         id = -1
         for i, c in enumerate(self.component_ids):
             if c == cid and i >= 0:
-                id = i
+                id = componentIndex(i)
+        for i, d in enumerate(self.dependencies):
+            if d.digest == cid and i >= 0:
+                id = dependencyIndex(i)
         return id
 
 suitCommonInfo = SUITCommonInformation()
@@ -95,6 +99,7 @@ class SUITPosInt(SUITInt):
     def from_json(self, v):
         TreeBranch.append(type(self))
         _v = int(v)
+        # print (_v)
         if _v < 0:
             raise Exception('Positive Integers must be >= 0')
         self.v = _v
@@ -110,6 +115,22 @@ class SUITManifestDict:
 
     def __init__(self):
         pass
+
+    def __eq__(self, rhs):
+        if not isinstance(rhs, type(self)):
+            return False
+
+        for f, info in self.fields:
+            if hasattr(self, f) != hasattr(rhs, f):
+                return False
+            if hasattr(self, f) and hasattr(rhs, f) and getattr(self, f) != getattr(rhs, f):
+                return False
+
+        for a,b in zip(self.items, rhs.items):
+            if not a == b:
+                return False
+        return True
+
     def from_json(self, data):
         for k, f in self.fields.items():
             v = data.get(f.json_key, None)
@@ -208,7 +229,7 @@ class SUITKeyMap:
 def SUITBWrapField(c):
     class SUITBWrapper:
         def to_suit(self):
-            return cbor.dumps(self.v.to_suit(), sort_keys=True)
+            return cbor.dumps(self.v.to_suit(), canonical=True)
         def from_suit(self, d):
             TreeBranch.append(type(self))
             try:
@@ -245,6 +266,8 @@ class SUITManifestArray:
     def __init__(self):
         self.items=[]
     def __eq__(self, rhs):
+        if not isinstance(rhs, type(self)):
+            return False
         if len(self.items) != len(rhs.items):
             return False
         for a,b in zip(self.items, rhs.items):
@@ -360,6 +383,9 @@ class SUITTStr(SUITRaw):
 
 class SUITComponentId(SUITManifestArray):
     field = collections.namedtuple('ArrayElement', 'obj')(obj=SUITBytes)
+    def to_suit(self):
+        return tuple(super(SUITComponentId, self).to_suit())
+
     def to_debug(self, indent):
         newindent = indent + one_indent
         s = '[' + ''.join([v.to_debug(newindent) for v in self.items]) + ']'
@@ -381,7 +407,6 @@ class SUITComponentIndex(SUITComponentId):
             dbg=''.join([v.to_debug(newindent) for v in self.items])
         )
         return s
-
 
 class SUITComponents(SUITManifestArray):
     field = collections.namedtuple('ArrayElement', 'obj')(obj=SUITComponentId)
@@ -409,6 +434,8 @@ class SUITDigest(SUITManifestNamedList):
         'algo' : ('algorithm-id', 0, SUITDigestAlgo),
         'digest' : ('digest-bytes', 1, SUITBytes)
     })
+    def __hash__(self):
+        return hash(tuple([getattr(self, k) for k in self.fields.keys() if hasattr(self, k)]))
 
 class SUITCompressionInfo(SUITKeyMap):
     rkeymap, keymap = SUITKeyMap.mkKeyMaps({
@@ -436,6 +463,13 @@ class SUITParameters(SUITManifestDict):
 class SUITTryEach(SUITManifestArray):
     pass
 
+class dependencyIndex(int):
+    def __new__(cls, value):
+        return super(cls, cls).__new__(cls, value)
+class componentIndex(int):
+    def __new__(cls, value):
+        return super(cls, cls).__new__(cls, value)
+
 def SUITCommandContainer(jkey, skey, argtype, dp=[]):
     class SUITCmd(SUITCommand):
         json_key = jkey
@@ -457,17 +491,25 @@ def SUITCommandContainer(jkey, skey, argtype, dp=[]):
         def from_json(self, j):
             if j['command-id'] != self.json_key:
                 raise Except('JSON Key mismatch error')
-            if self.json_key != 'directive-set-component-index':
-                self.cid = SUITComponentId().from_json(j['component-id'])
+            if self.json_key != 'directive-set-component-index' and self.json_key != 'directive-set-dependency-index':
+                try:
+                    self.cid = SUITComponentId().from_json(j['component-id'])
+                except:
+                    self.cid = SUITDigest().from_json(j['component-id'])
             self.arg = argtype().from_json(j['command-arg'])
             return self
         def from_suit(self, s):
             if s[0] != self.suit_key:
                 raise Except('SUIT Key mismatch error')
             if self.json_key == 'directive-set-component-index':
-                suitCommonInfo.current_index = s[1]
+                suitCommonInfo.current_index = componentIndex(s[1])
+            elif self.json_key == 'directive-set-dependency-index':
+                suitCommonInfo.current_index = dependencyIndex(s[1])
             else:
-                self.cid = suitCommonInfo.component_ids[suitCommonInfo.current_index]
+                if isinstance(suitCommonInfo.current_index, dependencyIndex):
+                    self.cid = suitCommonInfo.dependencies[suitCommonInfo.current_index]
+                else:
+                    self.cid = suitCommonInfo.component_ids[suitCommonInfo.current_index]
             self.arg = argtype().from_suit(s[1])
             return self
         def to_debug(self, indent):
@@ -476,6 +518,14 @@ def SUITCommandContainer(jkey, skey, argtype, dp=[]):
             return s
     return SUITCmd
 
+def mkPolicy(policy):
+    class SUITReportingPolicy(SUITPosInt):
+        default_policy = policy
+        def from_json(self, j):
+            if j is None:
+                j = self.default_policy
+            return super(SUITReportingPolicy, self).from_json(j)
+    return SUITReportingPolicy
 
 class SUITCommand:
     def from_json(self, j):
@@ -484,30 +534,30 @@ class SUITCommand:
         return self.scommands[s[0]]().from_suit(s)
 
 SUITCommand.commands = [
-    SUITCommandContainer('condition-vendor-identifier',    1,  SUITNil, ['vendor-id']),
-    SUITCommandContainer('condition-class-identifier',     2,  SUITNil, ['class-id']),
-    SUITCommandContainer('condition-image-match',          3,  SUITNil, ['digest']),
-    SUITCommandContainer('condition-use-before',           4,  SUITNil),
-    SUITCommandContainer('condition-component-offset',     5,  SUITNil, ['offset']),
-    SUITCommandContainer('condition-device-identifier',    24, SUITNil),
-    SUITCommandContainer('condition-image-not-match',      25, SUITNil),
-    SUITCommandContainer('condition-minimum-battery',      26, SUITNil),
-    SUITCommandContainer('condition-update-authorised',    27, SUITNil),
-    SUITCommandContainer('condition-version',              28, SUITNil),
+    SUITCommandContainer('condition-vendor-identifier',    1,  mkPolicy(policy=0xF), dp=['vendor-id']),
+    SUITCommandContainer('condition-class-identifier',     2,  mkPolicy(policy=0xF), dp=['class-id']),
+    SUITCommandContainer('condition-image-match',          3,  mkPolicy(policy=0xF), dp=['digest']),
+    SUITCommandContainer('condition-use-before',           4,  mkPolicy(policy=0xA)),
+    SUITCommandContainer('condition-component-offset',     5,  mkPolicy(policy=0x5), dp=['offset']),
+    SUITCommandContainer('condition-device-identifier',    24, mkPolicy(policy=0xF)),
+    SUITCommandContainer('condition-image-not-match',      25, mkPolicy(policy=0xF)),
+    SUITCommandContainer('condition-minimum-battery',      26, mkPolicy(policy=0xA)),
+    SUITCommandContainer('condition-update-authorised',    27, mkPolicy(policy=0x3)),
+    SUITCommandContainer('condition-version',              28, mkPolicy(policy=0xF)),
     SUITCommandContainer('directive-set-component-index',  12, SUITPosInt),
     SUITCommandContainer('directive-set-dependency-index', 13, SUITPosInt),
-    SUITCommandContainer('directive-abort',                14, SUITNil),
+    SUITCommandContainer('directive-abort',                14, mkPolicy(policy=0x2)),
     SUITCommandContainer('directive-try-each',             15, SUITTryEach),
-    SUITCommandContainer('directive-process-dependency',   18, SUITNil),
+    SUITCommandContainer('directive-process-dependency',   18, mkPolicy(policy=0)),
     SUITCommandContainer('directive-set-parameters',       19, SUITParameters),
     SUITCommandContainer('directive-override-parameters',  20, SUITParameters),
-    SUITCommandContainer('directive-fetch',                21, SUITNil),
-    SUITCommandContainer('directive-copy',                 22, SUITNil),
-    SUITCommandContainer('directive-run',                  23, SUITNil),
-    SUITCommandContainer('directive-wait',                 29, SUITNil),
+    SUITCommandContainer('directive-fetch',                21, mkPolicy(policy=0x2)),
+    SUITCommandContainer('directive-copy',                 22, mkPolicy(policy=0x2)),
+    SUITCommandContainer('directive-run',                  23, mkPolicy(policy=0x2)),
+    SUITCommandContainer('directive-wait',                 29, mkPolicy(policy=0x2)),
     SUITCommandContainer('directive-run-sequence',         30, SUITRaw),
     SUITCommandContainer('directive-run-with-arguments',   31, SUITRaw),
-    SUITCommandContainer('directive-swap',                 32, SUITNil),
+    SUITCommandContainer('directive-swap',                 32, mkPolicy(policy=0x2)),
 ]
 SUITCommand.jcommands = { c.json_key : c for c in SUITCommand.commands}
 SUITCommand.scommands = { c.suit_key : c for c in SUITCommand.commands}
@@ -519,19 +569,28 @@ class SUITSequence(SUITManifestArray):
         suit_l = []
         suitCommonInfo.current_index = 0 if len(suitCommonInfo.component_ids) == 1 else None
         for i in self.items:
-            # print(i.json_key, i.arg)
             if i.json_key == 'directive-set-component-index':
-                suitCommonInfo.current_index = i.arg.v
+                suitCommonInfo.current_index = componentIndex(i.arg.v)
+            elif i.json_key == 'directive-set-dependency-index':
+                suitCommonInfo.current_index = dependencyIndex(i.arg.v)
             else:
+                # Option 1: current & command index same class, same number,
+                    # Do nothing 
+                # Option 2: current & command not equal, command is component
+                    # set component index
+                # Option 3: current & command not equal, command is dependency
+                    # set dependency index
                 cidx = suitCommonInfo.component_id_to_index(i.cid)
                 if cidx != suitCommonInfo.current_index:
-                    # Change component
-                    cswitch = SUITCommand().from_json({
-                        'command-id' : 'directive-set-component-index',
-                        'command-arg' : cidx
-                    })
+                    op = 'directive-set-component-index'
+                    if isinstance(cidx, dependencyIndex):
+                        op = 'directive-set-dependency-index'
+                    # Change component/dependency
                     suitCommonInfo.current_index = cidx
-                    suit_l += cswitch.to_suit()
+                    suit_l += SUITCommand().from_json({
+                        'command-id' : op,
+                        'command-arg' : int(cidx)
+                    }).to_suit()
             suit_l += i.to_suit()
         return suit_l
     def to_debug(self, indent):
@@ -569,15 +628,95 @@ def SUITMakeSeverableField(c):
         def to_debug(self, indent):
             return self.v.to_debug(indent)
     return SUITSeverableField
-# class SUITSequenceOrDigest()
+
+class SUITDependency(SUITManifestDict):
+    fields = SUITManifestDict.mkfields({
+        'digest' : ('dependency-digest', 1, SUITDigest),
+        'prefix' : ('dependency-prefix', 2, SUITComponentId),
+    })
+
+class SUITDependencies(SUITManifestArray):
+    field = collections.namedtuple('ArrayElement', 'obj')(obj=SUITDependency)
+
+    def from_suit(self, data):
+        super(SUITDependencies, self).from_suit(data)
+        suitCommonInfo.dependencies = self.items
+        return self
+
+    def from_json(self, j):
+        super(SUITDependencies, self).from_json(j)
+        suitCommonInfo.dependencies = self.items
+        return self
 
 class SUITCommon(SUITManifestDict):
     fields = SUITManifestNamedList.mkfields({
-        # 'dependencies' : ('dependencies', 1, SUITBWrapField(SUITDependencies)),
-        'components' : ('components', 2, SUITBWrapField(SUITComponents)),
-        # 'dependency_components' : ('dependency-components', 3, SUITBWrapField(SUITDependencies)),
+        'dependencies' : ('dependencies', 1, SUITBWrapField(SUITDependencies)),
+        'components' : ('components', 2, SUITComponents),
         'common_sequence' : ('common-sequence', 4, SUITBWrapField(SUITSequenceComponentReset)),
     })
+
+class SUITComponentText(SUITManifestDict):
+    fields = SUITManifestDict.mkfields({
+        'vendorname' : ('vendor-name', 1, SUITTStr),
+        'modelname' : ('model-name', 2, SUITTStr),
+        'vendordomain' : ('vendor-domain', 3, SUITTStr),
+        'modelinfo' : ('json-source', 4, SUITTStr),
+        'cdesc' : ('component-description', 5, SUITTStr),
+        'version' : ('version', 6, SUITTStr),
+        'reqversion' : ('required-version', 7, SUITTStr),
+    })
+
+class SUITText(SUITManifestDict):
+    fields = SUITManifestDict.mkfields({
+        'mdesc' : ('manifest-description', 1, SUITTStr),
+        'udesc' : ('update-description', 2, SUITTStr),
+        'json' : ('json-source', 3, SUITTStr),
+        'yaml' : ('yaml-source', 4, SUITTStr),
+    })
+    components={}
+
+    def to_json(self):
+        d = super(SUITText, self).to_json()
+        d.update({k.to_json() : v.to_json() for k,v in self.components.items()})
+        return d
+
+    def from_json(self, data):
+        # Handle components
+        for k,v in data.items():
+            if not isinstance(v, str):
+                self.components[SUITComponentId().from_json(k)] = SUITComponentText().from_json(v)
+        # Treat everything else as a normal manifestDict
+        return super(SUITText, self).from_json(data)
+
+    def to_suit(self):
+        d = super(SUITText, self).to_suit()
+        d.update({k.to_suit() : v.to_suit() for k,v in self.components.items()})
+        return d
+
+    def from_suit(self, data):
+        # Handle components
+        for k,v in data.items():
+            if not isinstance(v, str):
+                self.components[SUITComponentId().from_suit(k)] = SUITComponentText().from_suit(v)
+        # Treat everything else as a normal manifestDict
+        return super(SUITText, self).from_json(data)
+    
+    def to_debug(self, indent):
+        s = '{'
+        newindent = indent + one_indent
+
+        for k, f in self.fields.items():
+            v = getattr(self, k)
+            if v:
+                s += '\n{ind}/ {jk} / {sk}:'.format(ind=newindent, jk=f.json_key, sk=f.suit_key)
+                s += v.to_debug(newindent) + ','
+        for k, f in self.components.items():
+            s += '\n' + newindent + '{}:'.format(k.to_debug(newindent + one_indent))
+            s += f.to_debug(newindent + one_indent)
+
+        s += '\n' + indent + '}'
+
+        return s
 
 
 class SUITManifest(SUITManifestDict):
@@ -585,12 +724,15 @@ class SUITManifest(SUITManifestDict):
         'version' : ('manifest-version', 1, SUITPosInt),
         'sequence' : ('manifest-sequence-number', 2, SUITPosInt),
         'common' : ('common', 3, SUITBWrapField(SUITCommon)),
+        'refuri' : ('reference-uri', 4, SUITTStr), 
         'deres' : ('dependency-resolution', 7, SUITMakeSeverableField(SUITSequenceComponentReset)),
         'fetch' : ('payload-fetch', 8, SUITMakeSeverableField(SUITSequenceComponentReset)),
         'install' : ('install', 9, SUITMakeSeverableField(SUITSequenceComponentReset)),
         'validate' : ('validate', 10, SUITBWrapField(SUITSequenceComponentReset)),
         'load' : ('load', 11, SUITBWrapField(SUITSequenceComponentReset)),
         'run' : ('run', 12, SUITBWrapField(SUITSequenceComponentReset)),
+        'text' : ('text', 13, SUITMakeSeverableField(SUITText)),
+        'coswid' : ('coswid', 14, SUITBytes),
     })
 
 class COSE_Algorithms(SUITKeyMap):
@@ -637,7 +779,7 @@ class COSETagChoice(SUITManifestDict):
         for k, f in self.fields.items():
             v = getattr(self, k, None)
             if v:
-                return cbor.Tag(tag=f.suit_key, value=v.to_suit())
+                return cbor.CBORTag(tag=f.suit_key, value=v.to_suit())
         return None
 
     def from_suit(self, data):
@@ -671,7 +813,7 @@ class COSEList(SUITManifestArray):
     def from_suit(self, data):
         return super(COSEList, self).from_suit(data)
 
-class SUITWrapper(SUITManifestDict):
+class SUITEnvelope(SUITManifestDict):
     fields = SUITManifestDict.mkfields({
         'auth' : ('authentication-wrapper', 2, SUITBWrapField(COSEList)),
         'manifest' : ('manifest', 3, SUITBWrapField(SUITManifest)),
@@ -681,9 +823,10 @@ class SUITWrapper(SUITManifestDict):
         'validate': ('validate', 10, SUITBWrapField(SUITSequence)),
         'load': ('load', 11, SUITBWrapField(SUITSequence)),
         'run': ('run', 12, SUITBWrapField(SUITSequence)),
-        # 'text': ('text', 13, SUITBWrapField(SUITSequence)),
+        'text': ('text', 13, SUITBWrapField(SUITText)),
+        'coswid': ('coswid', 14, SUITBytes),
     })
-    severable_fields = {'deres', 'fetch', 'install'} #, 'text'}
+    severable_fields = {'deres', 'fetch', 'install', 'text', 'coswid'}
     digest_algorithms = {
         'sha224' : hashes.SHA224,
         'sha256' : hashes.SHA256,
@@ -699,14 +842,14 @@ class SUITWrapper(SUITManifestDict):
             v = getattr(sev.manifest.v, k)
             if v is None:
                 continue
-            cbor_field = cbor.dumps(v.to_suit(), sort_keys=True)
+            cbor_field = cbor.dumps(v.to_suit(), canonical=True)
             digest = hashes.Hash(self.digest_algorithms.get(digest_alg)(), backend=default_backend())
             digest.update(cbor_field)
             field_digest = SUITDigest().from_json({
                 'algorithm-id' : digest_alg,
                 'digest-bytes' : digest.finalize()
             })
-            cbor_digest = cbor.dumps(field_digest.to_suit(), sort_keys=True)
+            cbor_digest = cbor.dumps(field_digest.to_suit(), canonical=True)
             if len(cbor_digest) < len(cbor_field):
                 setattr(sev.manifest.v, k, field_digest)
                 setattr(sev,k,v)
@@ -722,7 +865,7 @@ class SUITWrapper(SUITManifestDict):
             if v is None:
                 continue
             # Verify digest
-            cbor_field = cbor.dumps(v.to_suit(), sort_keys=True)
+            cbor_field = cbor.dumps(v.to_suit(), canonical=True)
             digest = hashes.Hash(hashes.SHA256(), backend=default_backend())
             digest.update(cbor_field)
             actual_digest = digest.finalize()

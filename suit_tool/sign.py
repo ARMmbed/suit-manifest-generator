@@ -17,7 +17,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ----------------------------------------------------------------------------
-import cbor
+import cbor2 as cbor
 import json
 
 from cryptography.hazmat.backends import default_backend
@@ -30,7 +30,8 @@ from cryptography.hazmat.primitives import serialization as ks
 import pyhsslms
 
 from suit_tool.manifest import COSE_Sign1, COSEList, SUITDigest,\
-                               SUITWrapper, SUITBytes, SUITBWrapField
+                               SUITEnvelope, SUITBytes, SUITBWrapField, \
+                               COSETaggedAuth
 import logging
 import binascii
 LOG = logging.getLogger(__name__)
@@ -86,7 +87,7 @@ def main(options):
             LOG.critical('Non-library key type not implemented')
             return 1
 
-    digest.update(cbor.dumps(wrapper[SUITWrapper.fields['manifest'].suit_key]))
+    digest.update(cbor.dumps(wrapper[SUITEnvelope.fields['manifest'].suit_key]))
 
     cose_signature = COSE_Sign1().from_json({
         'protected' : {
@@ -104,7 +105,7 @@ def main(options):
         cose_signature.protected.to_suit(),
         b'',
         cose_signature.payload.to_suit(),
-    ], sort_keys = True)
+    ], canonical = True)
     LOG.debug('Signing: {}'.format(binascii.b2a_hex(Sig_structure).decode('utf-8')))
 
     signature_bytes = {
@@ -117,11 +118,11 @@ def main(options):
 
     cose_signature.signature = SUITBytes().from_suit(signature_bytes)
 
-    auth = SUITBWrapField(COSEList)().from_json([{
+    auth = SUITBWrapField(COSEList)().from_suit(wrapper[SUITEnvelope.fields['auth'].suit_key])
+    auth.v.append(auth.v.field.obj().from_json({
         'COSE_Sign1_Tagged' : cose_signature.to_json()
-    }])
+    }))
+    wrapper[SUITEnvelope.fields['auth'].suit_key] = auth.to_suit()
 
-    wrapper[SUITWrapper.fields['auth'].suit_key] = auth.to_suit()
-
-    options.output_file.write(cbor.dumps(wrapper, sort_keys=True))
+    options.output_file.write(cbor.dumps(wrapper, canonical=True))
     return 0
