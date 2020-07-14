@@ -2,24 +2,18 @@
     "components" : [
         {
             "install-id" : ["00"],
-            "install-digest": {
-                "algorithm-id": "sha256",
-                "digest-bytes": "00112233445566778899aabbccddeeff0123456789abcdeffedcba9876543210"
-            },
-            "install-size" : 34768,
-            "uri": "http://example.com/file1.bin",
+            "uri": "http://server.local/file1.bin",
             "vendor-id" : "fa6b4a53-d5ad-5fdf-be9d-e663e4d41ffe",
             "class-id" : "1492af14-2569-5e48-bf42-9b2d51f2ab45",
             "bootable" : true
-        },
+        }
+    ],
+    "dependencies":[
         {
-            "install-id" : ["01"],
-            "install-digest": {
-                "algorithm-id": "sha256",
-                "digest-bytes": "0123456789abcdeffedcba987654321000112233445566778899aabbccddeeff"
-            },
-            "install-size" : 76834,
-            "uri": "http://example.com/file2.bin"
+            "src-file" : "deps/example6a.json",
+            "file" : "deps/example6a.suit",
+            "key-file" : "../private_key.pem",
+            "uri" : "http://server.local/example6a.suit"
         }
     ],
     "manifest-version": 1,

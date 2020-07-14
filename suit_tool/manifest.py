@@ -67,14 +67,15 @@ class SUITCommonInformation:
         self.current_index = 0
         self.indent_size = 4
     def component_id_to_index(self, cid):
-        id = -1
         for i, c in enumerate(self.component_ids):
             if c == cid and i >= 0:
-                id = componentIndex(i)
-        for i, d in enumerate(self.dependencies):
-            if d.digest == cid and i >= 0:
-                id = dependencyIndex(i)
-        return id
+                return componentIndex(i)
+        else:
+            for i, d in enumerate(self.dependencies):
+                if d.digest == cid and i >= 0:
+                    return dependencyIndex(i)
+            else:
+                raise SUITException('Failed to calculate component/dependency index', cid, TreeBranch)        
 
 suitCommonInfo = SUITCommonInformation()
 one_indent = '    '
@@ -101,7 +102,12 @@ class SUITPosInt(SUITInt):
         _v = int(v)
         # print (_v)
         if _v < 0:
-            raise Exception('Positive Integers must be >= 0')
+            raise SUITException(
+                m = 'Positive Integers must be >= 0. Got {}.'.format(_v),
+                data = _v,
+                tree_branch = TreeBranch
+            )
+
         self.v = _v
         TreeBranch.pop()
         return self
@@ -117,18 +123,12 @@ class SUITManifestDict:
         pass
 
     def __eq__(self, rhs):
-        if not isinstance(rhs, type(self)):
+        if not isinstance(rhs, SUITManifestDict):
             return False
-
-        for f, info in self.fields:
-            if hasattr(self, f) != hasattr(rhs, f):
-                return False
-            if hasattr(self, f) and hasattr(rhs, f) and getattr(self, f) != getattr(rhs, f):
+        for f, info in self.fields.items():
+            if not (getattr(self,f,None) == getattr(rhs,f,None)):
                 return False
 
-        for a,b in zip(self.items, rhs.items):
-            if not a == b:
-                return False
         return True
 
     def from_json(self, data):
@@ -208,6 +208,8 @@ class SUITManifestNamedList(SUITManifestDict):
         return s
 
 class SUITKeyMap:
+    def __eq__(self, rhs):
+        return self.v == rhs.v
     def mkKeyMaps(m):
         return {v:k for k,v in m.items()}, m
     def to_json(self):
@@ -266,7 +268,7 @@ class SUITManifestArray:
     def __init__(self):
         self.items=[]
     def __eq__(self, rhs):
-        if not isinstance(rhs, type(self)):
+        if not isinstance(rhs, SUITManifestArray):
             return False
         if len(self.items) != len(rhs.items):
             return False
@@ -388,7 +390,7 @@ class SUITComponentId(SUITManifestArray):
 
     def to_debug(self, indent):
         newindent = indent + one_indent
-        s = '[' + ''.join([v.to_debug(newindent) for v in self.items]) + ']'
+        s = '[' + ', '.join([v.to_debug(newindent) for v in self.items]) + ']'
         return s
     def __hash__(self):
         return hash(tuple([i.v for i in self.items]))
@@ -468,6 +470,8 @@ class SUITDigest(SUITManifestNamedList):
     })
     def __hash__(self):
         return hash(tuple([getattr(self, k) for k in self.fields.keys() if hasattr(self, k)]))
+    def __eq__(self, rhs):
+        return super(SUITDigest, self).__eq__(rhs)
 
 class SUITCompressionInfo(SUITKeyMap):
     rkeymap, keymap = SUITKeyMap.mkKeyMaps({
@@ -524,9 +528,9 @@ def SUITCommandContainer(jkey, skey, argtype, dp=[]):
             if j['command-id'] != self.json_key:
                 raise Except('JSON Key mismatch error')
             if self.json_key != 'directive-set-component-index' and self.json_key != 'directive-set-dependency-index':
-                try:
+                if isinstance(j['component-id'], list):
                     self.cid = mkBoolOrObj(SUITComponentId)().from_json(j['component-id'])
-                except:
+                else:
                     self.cid = mkBoolOrObj(SUITDigest)().from_json(j['component-id'])
             self.arg = argtype().from_json(j['command-arg'])
             return self
@@ -539,7 +543,7 @@ def SUITCommandContainer(jkey, skey, argtype, dp=[]):
                 suitCommonInfo.current_index = dependencyIndex(s[1])
             else:
                 if isinstance(suitCommonInfo.current_index, dependencyIndex):
-                    self.cid = suitCommonInfo.dependencies[suitCommonInfo.current_index]
+                    self.cid = suitCommonInfo.dependencies[suitCommonInfo.current_index].digest
                 else:
                     self.cid = suitCommonInfo.component_ids[suitCommonInfo.current_index]
             self.arg = argtype().from_suit(s[1])
@@ -594,12 +598,10 @@ SUITCommand.commands = [
 SUITCommand.jcommands = { c.json_key : c for c in SUITCommand.commands}
 SUITCommand.scommands = { c.suit_key : c for c in SUITCommand.commands}
 
-
 class SUITSequence(SUITManifestArray):
     field = collections.namedtuple('ArrayElement', 'obj')(obj=SUITCommand)
     def to_suit(self):
         suit_l = []
-        suitCommonInfo.current_index = 0 if len(suitCommonInfo.component_ids) == 1 else None
         for i in self.items:
             if i.json_key == 'directive-set-component-index':
                 suitCommonInfo.current_index = componentIndex(i.arg.v)
@@ -612,8 +614,9 @@ class SUITSequence(SUITManifestArray):
                     # set component index
                 # Option 3: current & command not equal, command is dependency
                     # set dependency index
+                current_index = suitCommonInfo.current_index
                 cidx = suitCommonInfo.component_id_to_index(i.cid)
-                if type(cidx) != type(suitCommonInfo.current_index) or cidx != suitCommonInfo.current_index:
+                if not isinstance(cidx, type(current_index)) or not (cidx == current_index):
                     op = 'directive-set-component-index'
                     if isinstance(cidx, dependencyIndex):
                         op = 'directive-set-dependency-index'
@@ -635,7 +638,12 @@ SUITTryEach.field = collections.namedtuple('ArrayElement', 'obj')(obj=SUITBWrapF
 
 class SUITSequenceComponentReset(SUITSequence):
     def to_suit(self):
-        suitCommonInfo.current_index = None
+        if len(suitCommonInfo.component_ids) == 1 and len(suitCommonInfo.dependencies) == 0:
+            suitCommonInfo.current_index = componentIndex(0)
+        elif len(suitCommonInfo.component_ids) == 0 and len(suitCommonInfo.dependencies) == 1:
+            suitCommonInfo.current_index = dependencyIndex(0)
+        else:
+            suitCommonInfo.current_index = None
         return super(SUITSequenceComponentReset, self).to_suit()
 
 def SUITMakeSeverableField(c):

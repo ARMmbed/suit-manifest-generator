@@ -210,8 +210,6 @@ def compile_manifest(options, m):
                 with open(dep['src-file']) as input_fd:
                     with open(dep['file']+'.tmp','wb') as output_fd:
                         create_opts = type('',(object,),{
-                            # 'input_file':  open(dep['src-file']),
-                            # 'output_file': open(dep['file']+'.tmp','wb'),
                             'input_file':  input_fd,
                             'output_file': output_fd,
                             'format' : 'suit',
@@ -244,7 +242,7 @@ def compile_manifest(options, m):
                 mfst = cbor.loads(cmfst)
             did = SUITDigest().from_json({
                     'algorithm-id' : 'sha256',
-                    'digest-bytes' : binascii.b2a_hex(digest.finalize())
+                    'digest-bytes' : binascii.b2a_hex(digest.finalize()).decode('utf-8')
                 })
 
             Dependencies.append(SUITDependency().from_json({
@@ -279,8 +277,10 @@ def compile_manifest(options, m):
             InstSeq = make_sequence(cid, choices, InstSeq, InstParams, InstCmds)
             for cmd in DepRequiredSequences['install']:
                 InstSeq.append(cmd)
-            InstSeq.append(mkCommand(cid, 'directive-fetch', None))
-            InstSeq.append(mkCommand(cid, 'condition-image-match', None))
+
+            if any(['install-digest' in c for c in choices]):
+                InstSeq.append(mkCommand(cid, 'directive-fetch', None))
+                InstSeq.append(mkCommand(cid, 'condition-image-match', None))
 
         elif any(['uri' in c for c in choices]):
             FetchParams = {
@@ -332,9 +332,9 @@ def compile_manifest(options, m):
         ValidateParams = {
         }
         ValidateSeq = make_sequence(cid, choices, ValidateSeq, ValidateParams, ValidateCmds)
+        ValidateSeq.append(mkCommand(cid, 'condition-image-match', None))
         for cmd in DepRequiredSequences['validate']:
             ValidateSeq.append(cmd)
-        ValidateSeq.append(mkCommand(cid, 'condition-image-match', None))
         # if any([c.get('bootable', False) for c in choices]):
         # TODO: Dependencies
         # If there are dependencies
@@ -398,16 +398,17 @@ def compile_manifest(options, m):
     
     # for k,v in {'deres':DepSeq, 'fetch': FetchSeq, 'install':InstSeq, 'validate':ValidateSeq, 'run':RunSeq, 'load':LoadSeq}.items():
     #     # print('sequence:{}'.format(k))
-    #     v.to_json()
+    #     print(v.to_json())
 
     jmanifest.update({k:v for k,v in {
-            'deres' : DepSeq.to_json(),
-            'fetch' : FetchSeq.to_json(),
+            'dependency-resolution' : DepSeq.to_json(),
+            'payload-fetch' : FetchSeq.to_json(),
             'install' : InstSeq.to_json(),
             'validate' : ValidateSeq.to_json(),
             'run' : RunSeq.to_json(),
             'load' : LoadSeq.to_json()
-    }.items() if v})
+    }.items() if len(v)})
+
 
     mtext = {}
     for k in ['manifest-description', 'update-description']:
@@ -449,7 +450,6 @@ def compile_manifest(options, m):
         }})
         jenvelope.update({'text' : mtext})
 
-    # print('building envelope')
     wrapped_manifest = SUITEnvelope().from_json(jenvelope)
 
     return wrapped_manifest
