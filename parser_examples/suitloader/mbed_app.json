@@ -27,15 +27,15 @@
                     "The following memory map describes the partitioning of the NRF52840_DK",
                     "+--------------------------+ <-+ 0x100000",
                     "|                          |",
-                    "|        Slot B App        | Size: 0x7BC00",
+                    "|        Slot B App        | Size: 0x7B000",
                     "|                          |",
-                    "+--------------------------+ <-+ 0x84400",
+                    "+--------------------------+ <-+ 0x85000",
                     "|  Slot B Metadata Header  |",
                     "+--------------------------+ <-+ 0x84000",
                     "|                          |",
-                    "|        Slot A App        | Size: 0x7BC00",
+                    "|        Slot A App        | Size: 0x7B000",
                     "|                          |",
-                    "+--------------------------+ <-+ 0x8400",
+                    "+--------------------------+ <-+ 0x9000",
                     "|  Slot A Metadata Header  |",
                     "+--------------------------+ <-+ 0x8000",
                     "|                          |",
@@ -48,7 +48,7 @@
     "macros": [
         "SUIT_BOOTLOADER_SLOT_A_OFFSET=0x8000",
         "SUIT_BOOTLOADER_SLOT_B_OFFSET=0x84000",
-        "SUIT_BOOTLOADER_HEADER_SIZE=0x400"
+        "SUIT_BOOTLOADER_HEADER_SIZE=0x1000"
     ],
     "target_overrides": {
         "*": {
