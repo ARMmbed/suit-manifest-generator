@@ -255,11 +255,12 @@ def SUITBWrapField(c):
             self.v = c().from_json(d)
             return self
         def to_debug(self, indent):
-            s = 'h\''
-            s += binascii.b2a_hex(self.to_suit()).decode('utf-8')
-            s += '\' / '
+            # s = 'h\''
+            # s += binascii.b2a_hex(self.to_suit()).decode('utf-8')
+            # s += '\' / '
+            s = 'bstr .cbor ('
             s += self.v.to_debug(indent)
-            s += ' /'
+            s += ')'
             return s
 
     return SUITBWrapper
@@ -340,7 +341,7 @@ class SUITUUID(SUITBytes):
         self.v = uuid.UUID(bytes=d).bytes
         return self
     def to_debug(self, indent):
-        return 'h\'' + json.dumps(self.to_json(), sort_keys=True) + '\' / ' + str(uuid.UUID(bytes=self.v)) + ' /'
+        return 'h\'' + self.to_json() + '\' / ' + str(uuid.UUID(bytes=self.v)) + ' /'
 
 
 class SUITRaw:
@@ -690,7 +691,7 @@ class SUITDependencies(SUITManifestArray):
 
 class SUITCommon(SUITManifestDict):
     fields = SUITManifestNamedList.mkfields({
-        'dependencies' : ('dependencies', 1, SUITBWrapField(SUITDependencies)),
+        'dependencies' : ('dependencies', 1, SUITDependencies),
         'components' : ('components', 2, SUITComponents),
         'common_sequence' : ('common-sequence', 4, SUITBWrapField(SUITSequenceComponentReset)),
     })

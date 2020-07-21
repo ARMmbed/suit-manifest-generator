@@ -159,6 +159,7 @@ def compile_manifest(options, m):
         else:
             cid_data[cid].append(c)
 
+    bootable_cid_data = OrderedDict( ( (cid,choices) for cid, choices in cid_data.items() if any([ c.get('bootable') for c in choices])))
     for id, choices in cid_data.items():
         for c in choices:
             if 'file' in c:
@@ -360,13 +361,17 @@ def compile_manifest(options, m):
                 LoadSeq.append(cmd)
             LoadSeq.append(mkCommand(load_id, 'directive-copy', None))
             LoadSeq.append(mkCommand(load_id, 'condition-image-match', None))
+        elif len(DepRequiredSequences['load']):
+            for cmd in DepRequiredSequences['load']:
+                LoadSeq.append(cmd)
 
         # Generate image invocation section
+    for cmd in DepRequiredSequences['run']:
+        RunSeq.append(cmd)
         bootable_components = [x for x in m['components'] if x.get('bootable')]
+    for cid, choices in bootable_cid_data.items():
         if len(bootable_components) == 1:
             c = bootable_components[0]
-            for cmd in DepRequiredSequences['run']:
-                RunSeq.append(cmd)
             RunSeq.append(SUITCommand().from_json({
                 'component-id' : runable_id(c),
                 'command-id' : 'directive-run',
@@ -380,7 +385,6 @@ def compile_manifest(options, m):
                 # t.append(
                 #
                 # )
-    #TODO: Text
     # print('Common')
     common = SUITCommon().from_json({
         'components': [id.to_json() for id in ids.keys()],

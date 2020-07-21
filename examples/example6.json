@@ -4,8 +4,7 @@
             "install-id" : ["00"],
             "uri": "http://server.local/file1.bin",
             "vendor-id" : "fa6b4a53-d5ad-5fdf-be9d-e663e4d41ffe",
-            "class-id" : "1492af14-2569-5e48-bf42-9b2d51f2ab45",
-            "bootable" : true
+            "class-id" : "1492af14-2569-5e48-bf42-9b2d51f2ab45"
         }
     ],
     "dependencies":[
