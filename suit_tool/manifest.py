@@ -613,7 +613,7 @@ class SUITSequence(SUITManifestArray):
                 # Option 3: current & command not equal, command is dependency
                     # set dependency index
                 cidx = suitCommonInfo.component_id_to_index(i.cid)
-                if cidx != suitCommonInfo.current_index:
+                if type(cidx) != type(suitCommonInfo.current_index) or cidx != suitCommonInfo.current_index:
                     op = 'directive-set-component-index'
                     if isinstance(cidx, dependencyIndex):
                         op = 'directive-set-dependency-index'
