@@ -393,6 +393,38 @@ class SUITComponentId(SUITManifestArray):
     def __hash__(self):
         return hash(tuple([i.v for i in self.items]))
 
+def mkBoolOrObj(cls):
+    class BoolOrObj():
+        def from_json(self, d):
+            if isinstance(d, bool):
+                self.v = d
+            else:
+                self.v = cls().from_json(d)
+            return self
+        def from_suit(self, d):
+            if isinstance(d, bool):
+                self.v = d
+            else:
+                self.v = cls().from_suit(d)
+            return self
+        def to_json(self):
+            if isinstance(self.v, bool):
+                return self.v
+            else:
+                return self.to_json()
+        def to_suit(self):
+            if isinstance(self.v, bool):
+                return self.v
+            else:
+                return self.to_suit()
+
+        def to_debug(self, indent):
+            if isinstance(self.v, bool):
+                return str(self.v)
+            else:
+                return self.to_debug(indent)
+    return BoolOrObj
+
 class SUITComponentIndex(SUITComponentId):
     def to_suit(self):
         return suitCommonInfo.component_id_to_index(self)
@@ -493,9 +525,9 @@ def SUITCommandContainer(jkey, skey, argtype, dp=[]):
                 raise Except('JSON Key mismatch error')
             if self.json_key != 'directive-set-component-index' and self.json_key != 'directive-set-dependency-index':
                 try:
-                    self.cid = SUITComponentId().from_json(j['component-id'])
+                    self.cid = mkBoolOrObj(SUITComponentId)().from_json(j['component-id'])
                 except:
-                    self.cid = SUITDigest().from_json(j['component-id'])
+                    self.cid = mkBoolOrObj(SUITDigest)().from_json(j['component-id'])
             self.arg = argtype().from_json(j['command-arg'])
             return self
         def from_suit(self, s):
@@ -544,8 +576,8 @@ SUITCommand.commands = [
     SUITCommandContainer('condition-minimum-battery',      26, mkPolicy(policy=0xA)),
     SUITCommandContainer('condition-update-authorised',    27, mkPolicy(policy=0x3)),
     SUITCommandContainer('condition-version',              28, mkPolicy(policy=0xF)),
-    SUITCommandContainer('directive-set-component-index',  12, SUITPosInt),
-    SUITCommandContainer('directive-set-dependency-index', 13, SUITPosInt),
+    SUITCommandContainer('directive-set-component-index',  12, mkBoolOrObj(SUITPosInt)),
+    SUITCommandContainer('directive-set-dependency-index', 13, mkBoolOrObj(SUITPosInt)),
     SUITCommandContainer('directive-abort',                14, mkPolicy(policy=0x2)),
     SUITCommandContainer('directive-try-each',             15, SUITTryEach),
     SUITCommandContainer('directive-process-dependency',   18, mkPolicy(policy=0)),
