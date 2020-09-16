@@ -64,11 +64,11 @@ class SUITCommonInformation:
     def __init__(self):
         self.component_ids = []
         self.dependencies = []
-        self.current_index = 0
+        self.current_index = None
         self.indent_size = 4
     def component_id_to_index(self, cid):
         for i, c in enumerate(self.component_ids):
-            if c == cid and i >= 0:
+            if cid == c and i >= 0:
                 return componentIndex(i)
         else:
             for i, d in enumerate(self.dependencies):
@@ -398,6 +398,8 @@ class SUITComponentId(SUITManifestArray):
 
 def mkBoolOrObj(cls):
     class BoolOrObj():
+        def __eq__(self,rhs):
+            return self.v.__eq__(rhs)
         def from_json(self, d):
             if isinstance(d, bool):
                 self.v = d
@@ -414,18 +416,18 @@ def mkBoolOrObj(cls):
             if isinstance(self.v, bool):
                 return self.v
             else:
-                return self.to_json()
+                return self.v.to_json()
         def to_suit(self):
             if isinstance(self.v, bool):
                 return self.v
             else:
-                return self.to_suit()
+                return self.v.to_suit()
 
         def to_debug(self, indent):
             if isinstance(self.v, bool):
                 return str(self.v)
             else:
-                return self.to_debug(indent)
+                return self.v.to_debug(indent)
     return BoolOrObj
 
 class SUITComponentIndex(SUITComponentId):

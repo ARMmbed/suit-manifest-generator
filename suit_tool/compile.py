@@ -365,10 +365,11 @@ def compile_manifest(options, m):
             for cmd in DepRequiredSequences['load']:
                 LoadSeq.append(cmd)
 
-        # Generate image invocation section
+    bootable_components = []
+    # Generate image invocation section
     for cmd in DepRequiredSequences['run']:
         RunSeq.append(cmd)
-        bootable_components = [x for x in m['components'] if x.get('bootable')]
+    bootable_components = [x for x in m['components'] if x.get('bootable')]
     for cid, choices in bootable_cid_data.items():
         if len(bootable_components) == 1:
             c = bootable_components[0]
