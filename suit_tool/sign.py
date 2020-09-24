@@ -96,7 +96,7 @@ def main(options):
         'unprotected' : {},
         'payload' : {
             'algorithm-id' : 'sha256',
-            'digest-bytes' : binascii.b2a_hex(digest.finalize())
+            'digest-bytes' : digest.finalize()
         }
     })
 
