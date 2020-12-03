@@ -159,13 +159,14 @@ def compile_manifest(options, m):
         else:
             cid_data[cid].append(c)
 
+    bootable_cid_data = OrderedDict( ( (cid,choices) for cid, choices in cid_data.items() if any([ c.get('bootable') for c in choices])))
     for id, choices in cid_data.items():
         for c in choices:
             if 'file' in c:
                 digest, imgsize = hash_file(c['file'], hashes.SHA256())
                 c['install-digest'] = {
                     'algorithm-id' : 'sha256',
-                    'digest-bytes' : binascii.b2a_hex(digest.finalize())
+                    'digest-bytes' : binascii.b2a_hex(digest.finalize()).decode('utf-8')
                 }
                 c['install-size'] = imgsize
 
@@ -210,8 +211,6 @@ def compile_manifest(options, m):
                 with open(dep['src-file']) as input_fd:
                     with open(dep['file']+'.tmp','wb') as output_fd:
                         create_opts = type('',(object,),{
-                            # 'input_file':  open(dep['src-file']),
-                            # 'output_file': open(dep['file']+'.tmp','wb'),
                             'input_file':  input_fd,
                             'output_file': output_fd,
                             'format' : 'suit',
@@ -244,7 +243,7 @@ def compile_manifest(options, m):
                 mfst = cbor.loads(cmfst)
             did = SUITDigest().from_json({
                     'algorithm-id' : 'sha256',
-                    'digest-bytes' : binascii.b2a_hex(digest.finalize())
+                    'digest-bytes' : binascii.b2a_hex(digest.finalize()).decode('utf-8')
                 })
 
             Dependencies.append(SUITDependency().from_json({
@@ -279,8 +278,10 @@ def compile_manifest(options, m):
             InstSeq = make_sequence(cid, choices, InstSeq, InstParams, InstCmds)
             for cmd in DepRequiredSequences['install']:
                 InstSeq.append(cmd)
-            InstSeq.append(mkCommand(cid, 'directive-fetch', None))
-            InstSeq.append(mkCommand(cid, 'condition-image-match', None))
+
+            if any(['install-digest' in c for c in choices]):
+                InstSeq.append(mkCommand(cid, 'directive-fetch', None))
+                InstSeq.append(mkCommand(cid, 'condition-image-match', None))
 
         elif any(['uri' in c for c in choices]):
             FetchParams = {
@@ -332,9 +333,9 @@ def compile_manifest(options, m):
         ValidateParams = {
         }
         ValidateSeq = make_sequence(cid, choices, ValidateSeq, ValidateParams, ValidateCmds)
+        ValidateSeq.append(mkCommand(cid, 'condition-image-match', None))
         for cmd in DepRequiredSequences['validate']:
             ValidateSeq.append(cmd)
-        ValidateSeq.append(mkCommand(cid, 'condition-image-match', None))
         # if any([c.get('bootable', False) for c in choices]):
         # TODO: Dependencies
         # If there are dependencies
@@ -360,13 +361,18 @@ def compile_manifest(options, m):
                 LoadSeq.append(cmd)
             LoadSeq.append(mkCommand(load_id, 'directive-copy', None))
             LoadSeq.append(mkCommand(load_id, 'condition-image-match', None))
+        elif len(DepRequiredSequences['load']):
+            for cmd in DepRequiredSequences['load']:
+                LoadSeq.append(cmd)
 
-        # Generate image invocation section
-        bootable_components = [x for x in m['components'] if x.get('bootable')]
+    bootable_components = []
+    # Generate image invocation section
+    for cmd in DepRequiredSequences['run']:
+        RunSeq.append(cmd)
+    bootable_components = [x for x in m['components'] if x.get('bootable')]
+    for cid, choices in bootable_cid_data.items():
         if len(bootable_components) == 1:
             c = bootable_components[0]
-            for cmd in DepRequiredSequences['run']:
-                RunSeq.append(cmd)
             RunSeq.append(SUITCommand().from_json({
                 'component-id' : runable_id(c),
                 'command-id' : 'directive-run',
@@ -380,7 +386,6 @@ def compile_manifest(options, m):
                 # t.append(
                 #
                 # )
-    #TODO: Text
     # print('Common')
     common = SUITCommon().from_json({
         'components': [id.to_json() for id in ids.keys()],
@@ -398,16 +403,17 @@ def compile_manifest(options, m):
     
     # for k,v in {'deres':DepSeq, 'fetch': FetchSeq, 'install':InstSeq, 'validate':ValidateSeq, 'run':RunSeq, 'load':LoadSeq}.items():
     #     # print('sequence:{}'.format(k))
-    #     v.to_json()
+    #     print(v.to_json())
 
     jmanifest.update({k:v for k,v in {
-            'deres' : DepSeq.to_json(),
-            'fetch' : FetchSeq.to_json(),
+            'dependency-resolution' : DepSeq.to_json(),
+            'payload-fetch' : FetchSeq.to_json(),
             'install' : InstSeq.to_json(),
             'validate' : ValidateSeq.to_json(),
             'run' : RunSeq.to_json(),
             'load' : LoadSeq.to_json()
-    }.items() if v})
+    }.items() if len(v)})
+
 
     mtext = {}
     for k in ['manifest-description', 'update-description']:
@@ -449,7 +455,6 @@ def compile_manifest(options, m):
         }})
         jenvelope.update({'text' : mtext})
 
-    # print('building envelope')
     wrapped_manifest = SUITEnvelope().from_json(jenvelope)
 
     return wrapped_manifest

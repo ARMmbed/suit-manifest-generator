@@ -17,11 +17,36 @@
 # limitations under the License.
 # ----------------------------------------------------------------------------
 from suit_tool.compile import compile_manifest
+from suit_tool.manifest import SUITEnvelope, SUITDigest
+import binascii
 import json
 import cbor2 as cbor
 import itertools
 import textwrap
 from collections import OrderedDict
+
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import hashes
+
+
+def suit_mfst(mfst, options):
+    digest = {
+        'sha256' : hashes.Hash(hashes.SHA256(), backend=default_backend()),
+        'sha384' : hashes.Hash(hashes.SHA384(), backend=default_backend()),
+        'sha512' : hashes.Hash(hashes.SHA512(), backend=default_backend()),
+    }.get('sha256')
+
+    mfst_tmp = mfst.to_suit()
+    digest.update(cbor.dumps(mfst_tmp[SUITEnvelope.fields['manifest'].suit_key]))
+    mfst_tmp[SUITEnvelope.fields['auth'].suit_key] = cbor.dumps([
+        cbor.dumps(SUITDigest().from_json({
+            'algorithm-id' : 'sha256',
+            'digest-bytes' : binascii.b2a_hex(digest.finalize()).decode('utf-8')
+        }).to_suit(), canonical = True)
+    ])
+
+    mfst_envelope = cbor.dumps(mfst_tmp, canonical=True)
+    return mfst_envelope
 
 def main(options):
     m = json.loads(options.input_file.read(), object_pairs_hook=OrderedDict)
@@ -31,7 +56,7 @@ def main(options):
     if m.get('severable') or (hasattr(options, 'severable') and options.severable):
         nm = nm.to_severable('sha256')
     output = {
-        'suit' : lambda x: cbor.dumps(x.to_suit(), canonical=True),
+        'suit' : lambda x: suit_mfst(x,options),
         'suit-debug' : lambda x: '\n'.join(itertools.chain.from_iterable(
             map(textwrap.wrap, x.to_debug('').split('\n'))
         )).encode('utf-8'),
