@@ -72,7 +72,7 @@ class SUITCommonInformation:
                 return componentIndex(i)
         else:
             for i, d in enumerate(self.dependencies):
-                if d.digest == cid and i >= 0:
+                if cid == d.digest and i >= 0:
                     return dependencyIndex(i)
             else:
                 raise SUITException('Failed to calculate component/dependency index', cid, TreeBranch)        
@@ -504,9 +504,13 @@ class SUITTryEach(SUITManifestArray):
 
 class dependencyIndex(int):
     def __new__(cls, value):
+        if isinstance(value, SUITPosInt):
+            value = value.v
         return super(cls, cls).__new__(cls, value)
 class componentIndex(int):
     def __new__(cls, value):
+        if isinstance(value, SUITPosInt):
+            value = value.v
         return super(cls, cls).__new__(cls, value)
 
 def SUITCommandContainer(jkey, skey, argtype, dp=[]):
@@ -640,14 +644,19 @@ class SUITSequence(SUITManifestArray):
 SUITTryEach.field = collections.namedtuple('ArrayElement', 'obj')(obj=SUITBWrapField(SUITSequence))
 
 class SUITSequenceComponentReset(SUITSequence):
-    def to_suit(self):
+    def reset_idx(self):
         if len(suitCommonInfo.component_ids) == 1 and len(suitCommonInfo.dependencies) == 0:
             suitCommonInfo.current_index = componentIndex(0)
         elif len(suitCommonInfo.component_ids) == 0 and len(suitCommonInfo.dependencies) == 1:
             suitCommonInfo.current_index = dependencyIndex(0)
         else:
             suitCommonInfo.current_index = None
+    def to_suit(self):
+        self.reset_idx()
         return super(SUITSequenceComponentReset, self).to_suit()
+    def from_suit(self, data):
+        self.reset_idx()
+        return super(SUITSequenceComponentReset, self).from_suit(data)
 
 def SUITMakeSeverableField(c):
     class SUITSeverableField:
@@ -853,8 +862,33 @@ class COSETaggedAuth(COSETagChoice):
 
 class COSEList(SUITManifestArray):
     field = collections.namedtuple('ArrayElement', 'obj')(obj=SUITBWrapField(COSETaggedAuth))
+    digestType = SUITBWrapField(SUITDigest)
     def from_suit(self, data):
-        return super(COSEList, self).from_suit(data)
+        if len(data):
+            self.digest = self.digestType().from_suit(data[0])
+        return super(COSEList, self).from_suit(data[1:])
+
+    def to_suit(self):
+        return [x.digest.to_suit() for x in [self] if hasattr(x, 'digest')] + super(COSEList, self).to_suit()
+    def from_json(self, data):
+        if len(data):
+            self.digest = self.digestType().from_json(data[0])
+        return super(COSEList, self).from_json(data[1:])
+    def to_json(self):
+        return [self.digest.to_json()] + super(COSEList, self).to_json()
+    def to_debug(self, indent):
+        s = '{'
+        indent1 = indent + one_indent
+        # show digest
+        if hasattr(self,'digest'):
+            s += indent1 + 'digest: ' + self.digest.to_debug(indent1)
+        # show signatures
+        s += indent1 + 'signatures: [\n'
+        indent2 = indent1 + one_indent
+        s += ' ,\n'.join([indent2 + v.to_debug(indent2) for v in self.items])
+        s += '\n' + indent1 + ']'
+        s += '\n{}}}'.format(indent)
+        return s 
 
 class SUITEnvelope(SUITManifestDict):
     fields = SUITManifestDict.mkfields({
@@ -921,3 +955,8 @@ class SUITEnvelope(SUITManifestDict):
             setattr(nsev.manifest.v, k, v)
             delattr(nsev, k)
         return nsev
+
+class SUITEnvelopeTagged(COSETagChoice):
+    fields = SUITManifestDict.mkfields({
+        'suit_envelope' : ('COSE_Sign_Tagged', 48, SUITEnvelope),
+    })
