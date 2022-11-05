@@ -1,3 +1,9 @@
+# Migration: THIS REPO IS ARCHIVED
+
+The suit-tool is being developed at: https://gitlab.arm.com/research/ietf-suit/suit-tool
+The suit-parser is being developed at: https://gitlab.arm.com/research/ietf-suit/suit-parser
+The core CBOR parser, used by suit-parser, is being developed at: https://gitlab.arm.com/research/ietf-suit/pull-cbor
+
 # Manifest Generator
 
 This repository contains a tool to generate manifests following the specification in https://tools.ietf.org/html/draft-ietf-suit-manifest-09.
